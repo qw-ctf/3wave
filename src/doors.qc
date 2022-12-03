@@ -112,8 +112,7 @@ void() door_fire =
 // play use key sound
 
 	if (self.items)
-//		sound (self, CHAN_VOICE, self.noise4, 1, ATTN_NORM);
-		sound (self, CHAN_ITEM, self.noise4, 1, ATTN_NORM);
+		sound (self, CHAN_VOICE, self.noise4, 1, ATTN_NORM);
 
 	self.message = string_null;		// no more message
 	oself = self;
@@ -561,6 +560,7 @@ float SECRET_1ST_LEFT = 2;		// 1st move is left of arrow
 float SECRET_1ST_DOWN = 4;		// 1st move is down from arrow
 float SECRET_NO_SHOOT = 8;		// only opened by trigger
 float SECRET_YES_SHOOT = 16;	// shootable even if targeted
+float SECRET_NEVER = 32;		// lock it shut
 
 
 void () fd_secret_use =
@@ -576,6 +576,9 @@ void () fd_secret_use =
 	self.message = string_null;		// no more message
 
 	SUB_UseTargets();				// fire all targets / killtargets
+
+	if (self.spawnflags & SECRET_NEVER)
+		return; // it never opens
 
 	if (!(self.spawnflags & SECRET_NO_SHOOT))
 	{
@@ -759,6 +762,7 @@ void () func_door_secret =
 	self.solid = SOLID_BSP;
 	self.movetype = MOVETYPE_PUSH;
 	self.classname = "door";
+
 	setmodel (self, self.model);
 	setorigin (self, self.origin);
 

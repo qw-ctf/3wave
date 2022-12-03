@@ -1,12 +1,19 @@
-../progs.dat
+progs.dat
 
 defs.qc
+teamplay.qc     // Compile the teamplay file
 subs.qc
 fight.qc
 ai.qc
 combat.qc
 items.qc
+
 weapons.qc
+
+flame.qc
+
+telefrag.qc		// from server modules
+
 world.qc
 client.qc
 player.qc
@@ -33,3 +40,4 @@ fish.qc			// registered
 shalrath.qc		// registered
 enforcer.qc		// registered
 oldone.qc		// registered
+hook.qc

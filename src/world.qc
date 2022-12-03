@@ -172,6 +172,10 @@ World Types:
 void() worldspawn =
 {
 	lastspawn = world;
+	runespawn = world;
+	runespawned = 0;
+	capturespawned = 0;
+	teamscored = 0;
 	InitBodyQue ();
 
 // custom map attributes
@@ -241,6 +245,7 @@ void() worldspawn =
 	precache_sound ("weapons/ax1.wav");			// ax swoosh
 	precache_sound ("player/axhit1.wav");		// ax hit meat
 	precache_sound ("player/axhit2.wav");		// ax hit world
+	precache_sound ("hknight/hit.wav");			// ZOID: hook launch
 
 	precache_sound ("player/h2ojump.wav");		// player jumping into water
 	precache_sound ("player/slimbrn2.wav");		// player enter slime
@@ -282,12 +287,23 @@ void() worldspawn =
 	precache_model ("progs/spike.mdl");
 	precache_model ("progs/s_spike.mdl");
 
+// for hook
+    precache_model ("progs/v_spike.mdl");
+
 	precache_model ("progs/backpack.mdl");
 
 	precache_model ("progs/zom_gib.mdl");
 
 	precache_model ("progs/v_light.mdl");
 
+// rune precache
+	precache_model ("progs/end1.mdl");
+	precache_model ("progs/end2.mdl");
+	precache_model ("progs/end3.mdl");
+	precache_model ("progs/end4.mdl");
+	precache_sound ("items/protect3.wav");
+	precache_sound ("items/r_item1.wav");
+	precache_sound ("boss1/sight1.wav");
 
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
@@ -377,6 +393,7 @@ void() InitBodyQue =
 // respawned elsewhere
 void(entity ent) CopyToBodyQue =
 {
+	bodyque_head.skin = ent.skin;
 	bodyque_head.angles = ent.angles;
 	bodyque_head.model = ent.model;
 	bodyque_head.modelindex = ent.modelindex;

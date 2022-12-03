@@ -5,11 +5,16 @@ void () player_run;
 void(entity bomb, entity attacker, float rad, entity ignore) T_RadiusDamage;
 void(vector org, vector vel, float damage) SpawnBlood;
 void() SuperDamageSound;
+void() HasteSound;
 
+//Flamethrower
+void () W_FireFlame;
 
 // called by worldspawn
 void() W_Precache =
 {
+	precache_sound ("hknight/hit.wav");  // flamethrower
+
 	precache_sound ("weapons/r_exp3.wav");	// new rocket explosion
 	precache_sound ("weapons/rocket1i.wav");	// spike gun
 	precache_sound ("weapons/sgun1.wav");
@@ -22,6 +27,9 @@ void() W_Precache =
 	precache_sound ("weapons/grenade.wav");	// grenade launcher
 	precache_sound ("weapons/bounce.wav");		// grenade bounce
 	precache_sound ("weapons/shotgn2.wav");	// super shotgun
+        precache_sound2 ("blob/land1.wav");     // chain go splorch!
+        precache_sound ("plats/medplat1.wav");  // chain cranking out
+        precache_sound ("doors/ddoor1.wav");    // chain cranking in
 };
 
 float() crandom =
@@ -89,7 +97,7 @@ SpawnMeatSpray
 void(vector org, vector vel) SpawnMeatSpray =
 {
 	local	entity missile, mpuff;
-//	local	vector	org;
+	local	vector	org;
 
 	missile = spawn ();
 	missile.owner = self;
@@ -767,6 +775,12 @@ void() W_SetCurrentAmmo =
 		self.weaponmodel = "progs/v_axe.mdl";
 		self.weaponframe = 0;
 	}
+	else if (self.weapon == IT_HOOK)
+	{
+		self.currentammo = 0;
+		self.weaponmodel = "progs/v_axe.mdl";
+		self.weaponframe = 0;
+	}
 	else if (self.weapon == IT_SHOTGUN)
 	{
 		self.currentammo = self.ammo_shells;
@@ -809,6 +823,13 @@ void() W_SetCurrentAmmo =
 		self.weaponframe = 0;
 		self.items = self.items | IT_ROCKETS;
 	}
+	else if (self.weapon == IT_FLAMETHROWER)
+	{
+		self.currentammo = self.ammo_shells;
+		self.weaponmodel = "progs/v_rock.mdl";
+		self.weaponframe = 0;
+		self.items = self.items | IT_SHELLS;
+	}
 	else if (self.weapon == IT_LIGHTNING)
 	{
 		self.currentammo = self.ammo_cells;
@@ -831,7 +852,7 @@ float() W_BestWeapon =
 	it = self.items;
 
 	if (self.waterlevel <= 1 && self.ammo_cells >= 1 && (it & IT_LIGHTNING) )
-			return IT_LIGHTNING;
+		return IT_LIGHTNING;
 	if(self.ammo_nails >= 2 && (it & IT_SUPER_NAILGUN) )
 		return IT_SUPER_NAILGUN;
 	if(self.ammo_shells >= 2 && (it & IT_SUPER_SHOTGUN) )
@@ -848,7 +869,7 @@ float() W_CheckNoAmmo =
 	if (self.currentammo > 0)
 		return TRUE;
 
-	if (self.weapon == IT_AXE)
+	if (self.weapon == IT_AXE || self.weapon == IT_HOOK)
 		return TRUE;
 
 	self.weapon = W_BestWeapon ();
@@ -874,6 +895,8 @@ void()	player_shot1;
 void()	player_nail1;
 void()	player_light1;
 void()	player_rocket1;
+void()	player_chain1;
+void()  player_chain3;
 
 void() W_Attack =
 {
@@ -897,18 +920,33 @@ void() W_Attack =
 			player_axec1 ();
 		else
 			player_axed1 ();
-		self.attack_finished = time + 0.5;
+		// RUNE: rune of hell magic
+		if (self.player_flag & ITEM_RUNE3_FLAG) {
+			self.attack_finished = time + 0.3;
+			HasteSound();
+		} else
+			self.attack_finished = time + 0.5;
 	}
 	else if (self.weapon == IT_SHOTGUN)
 	{
 		player_shot1 ();
 		W_FireShotgun ();
+		// RUNE: rune of hell magic
+		if (self.player_flag & ITEM_RUNE3_FLAG) {
+			self.attack_finished = time + 0.3;
+			HasteSound();
+		} else
 		self.attack_finished = time + 0.5;
 	}
 	else if (self.weapon == IT_SUPER_SHOTGUN)
 	{
 		player_shot1 ();
 		W_FireSuperShotgun ();
+		// RUNE: rune of hell magic
+		if (self.player_flag & ITEM_RUNE3_FLAG) {
+			self.attack_finished = time + 0.4;
+			HasteSound();
+		} else
 		self.attack_finished = time + 0.7;
 	}
 	else if (self.weapon == IT_NAILGUN)
@@ -923,19 +961,47 @@ void() W_Attack =
 	{
 		player_rocket1();
 		W_FireGrenade();
-		self.attack_finished = time + 0.6;
+		// RUNE: rune of hell magic
+		if (self.player_flag & ITEM_RUNE3_FLAG) {
+			self.attack_finished = time + 0.3;
+			HasteSound();
+		} else
+			self.attack_finished = time + 0.6;
 	}
 	else if (self.weapon == IT_ROCKET_LAUNCHER)
 	{
 		player_rocket1();
 		W_FireRocket();
-		self.attack_finished = time + 0.8;
+		// RUNE: rune of hell magic
+		if (self.player_flag & ITEM_RUNE3_FLAG) {
+			self.attack_finished = time + 0.4;
+			HasteSound();
+		} else
+			self.attack_finished = time + 0.8;
+	}
+// Flamethrower
+	else if (self.weapon == IT_FLAMETHROWER)
+	{
+		player_shot1();
+		W_FireFlame();
+		if (self.waterlevel >2)
+			self.attack_finished = time + 1;
+		else
+			self.attack_finished = time + 0.1;
 	}
 	else if (self.weapon == IT_LIGHTNING)
 	{
 		player_light1();
 		self.attack_finished = time + 0.1;
 		sound (self, CHAN_AUTO, "weapons/lstart.wav", 1, ATTN_NORM);
+	}
+	else if (self.weapon == IT_HOOK)
+	{
+		if (!self.hook_out)
+			player_chain1();
+		else
+			player_chain3();
+		self.attack_finished = time + 0.1;
 	}
 };
 
@@ -952,50 +1018,51 @@ void() W_ChangeWeapon =
 	it = self.items;
 	am = 0;
 
-	if (self.impulse == 1)
-	{
-		fl = IT_AXE;
-	}
-	else if (self.impulse == 2)
-	{
+	if (self.impulse == 1) {
+		if (self.weapon == IT_AXE)
+			fl = IT_HOOK;
+		else
+			fl = IT_AXE;
+	} else if (self.impulse == 2) {
 		fl = IT_SHOTGUN;
 		if (self.ammo_shells < 1)
 			am = 1;
-	}
-	else if (self.impulse == 3)
-	{
+	} else if (self.impulse == 3) {
 		fl = IT_SUPER_SHOTGUN;
 		if (self.ammo_shells < 2)
 			am = 1;
-	}
-	else if (self.impulse == 4)
-	{
+	} else if (self.impulse == 4) {
 		fl = IT_NAILGUN;
 		if (self.ammo_nails < 1)
 			am = 1;
-	}
-	else if (self.impulse == 5)
-	{
+	} else if (self.impulse == 5) {
 		fl = IT_SUPER_NAILGUN;
 		if (self.ammo_nails < 2)
 			am = 1;
-	}
-	else if (self.impulse == 6)
-	{
+	} else if (self.impulse == 6) {
+		if (self.weapon != IT_GRENADE_LAUNCHER && self.ammo_rockets > 0) {
 		fl = IT_GRENADE_LAUNCHER;
 		if (self.ammo_rockets < 1)
 			am = 1;
-	}
-	else if (self.impulse == 7)
-	{
+		} else if (self.ammo_shells > 1) {
+				fl = IT_FLAMETHROWER;
+				if (self.ammo_shells < 1)
+					am = 1;
+		} else
+			am = 1;
+	} else if (self.impulse == 7) {
 		fl = IT_ROCKET_LAUNCHER;
 		if (self.ammo_rockets < 1)
 			am = 1;
-	}
-	else if (self.impulse == 8)
-	{
+	} else if (self.impulse == 8) {
 		fl = IT_LIGHTNING;
 		if (self.ammo_cells < 1)
+			am = 1;
+	} else if (self.impulse == 22) {
+		fl = IT_HOOK;
+	} else if (self.impulse == 50) {
+		fl = IT_FLAMETHROWER;
+		if (self.ammo_shells < 1)
 			am = 1;
 	}
 
@@ -1017,6 +1084,15 @@ void() W_ChangeWeapon =
 // set weapon, set ammo
 //
 	self.weapon = fl;
+	if (self.weapon == IT_FLAMETHROWER)
+		sprint (self,"Flamethrower selected.\n");
+	else if (self.weapon == IT_GRENADE_LAUNCHER)
+		sprint (self,"Grenade Launcher selected.\n");
+	else if (self.weapon == IT_AXE)
+		sprint(self, "Axe selected.\n");
+	else if (self.weapon == IT_HOOK)
+		sprint(self, "Grappling hook selected.\n");
+
 	W_SetCurrentAmmo ();
 };
 
@@ -1027,7 +1103,7 @@ CheatCommand
 */
 void() CheatCommand =
 {
-	if (deathmatch)
+	if (deathmatch || coop)
 		return;
 
 	self.ammo_rockets = 100;
@@ -1035,11 +1111,13 @@ void() CheatCommand =
 	self.ammo_shells = 100;
 	self.items = self.items |
 		IT_AXE |
+		IT_HOOK |
 		IT_SHOTGUN |
 		IT_SUPER_SHOTGUN |
 		IT_NAILGUN |
 		IT_SUPER_NAILGUN |
 		IT_GRENADE_LAUNCHER |
+                IT_FLAMETHROWER |
 		IT_ROCKET_LAUNCHER |
 		IT_KEY1 | IT_KEY2;
 
@@ -1069,48 +1147,37 @@ void() CycleWeaponCommand =
 	{
 		am = 0;
 
-		if (self.weapon == IT_LIGHTNING)
-		{
+		if (self.weapon == IT_LIGHTNING) {
 			self.weapon = IT_AXE;
-		}
-		else if (self.weapon == IT_AXE)
-		{
+		} else if (self.weapon == IT_AXE) {
+			self.weapon = IT_HOOK;
+		} else if (self.weapon == IT_HOOK) {
 			self.weapon = IT_SHOTGUN;
 			if (self.ammo_shells < 1)
 				am = 1;
-		}
-		else if (self.weapon == IT_SHOTGUN)
-		{
+		} else if (self.weapon == IT_SHOTGUN) {
 			self.weapon = IT_SUPER_SHOTGUN;
 			if (self.ammo_shells < 2)
 				am = 1;
-		}
-		else if (self.weapon == IT_SUPER_SHOTGUN)
-		{
+		} else if (self.weapon == IT_SUPER_SHOTGUN) {
 			self.weapon = IT_NAILGUN;
 			if (self.ammo_nails < 1)
 				am = 1;
-		}
-		else if (self.weapon == IT_NAILGUN)
-		{
+		} else if (self.weapon == IT_NAILGUN) {
 			self.weapon = IT_SUPER_NAILGUN;
 			if (self.ammo_nails < 2)
 				am = 1;
-		}
-		else if (self.weapon == IT_SUPER_NAILGUN)
-		{
+		} else if (self.weapon == IT_SUPER_NAILGUN) {
 			self.weapon = IT_GRENADE_LAUNCHER;
 			if (self.ammo_rockets < 1)
 				am = 1;
-		}
-		else if (self.weapon == IT_GRENADE_LAUNCHER)
-		{
-			self.weapon = IT_ROCKET_LAUNCHER;
+		} else if (self.weapon == IT_GRENADE_LAUNCHER) {
+			self.weapon = IT_FLAMETHROWER;
 			if (self.ammo_rockets < 1)
 				am = 1;
-		}
-		else if (self.weapon == IT_ROCKET_LAUNCHER)
-		{
+		} else if (self.weapon == IT_FLAMETHROWER) {
+		   self.weapon = IT_ROCKET_LAUNCHER;
+		} else if (self.weapon == IT_ROCKET_LAUNCHER) {
 			self.weapon = IT_LIGHTNING;
 			if (self.ammo_cells < 1)
 				am = 1;
@@ -1118,6 +1185,11 @@ void() CycleWeaponCommand =
 
 		if ( (it & self.weapon) && am == 0)
 		{
+                        if (self.weapon == IT_FLAMETHROWER)
+                                sprint(self,"Flamethrower\n");
+                        else if (self.weapon == IT_GRENADE_LAUNCHER)
+                                sprint(self,"Grenade Launcher\n");
+
 			W_SetCurrentAmmo ();
 			return;
 		}
@@ -1181,6 +1253,10 @@ void() CycleWeaponReverseCommand =
 		}
 		else if (self.weapon == IT_SHOTGUN)
 		{
+			self.weapon = IT_HOOK;
+		}
+		else if (self.weapon == IT_HOOK)
+		{
 			self.weapon = IT_AXE;
 		}
 		else if (self.weapon == IT_AXE)
@@ -1208,19 +1284,28 @@ Just for development
 */
 void() ServerflagsCommand =
 {
-	if (deathmatch)
-		return;
 	serverflags = serverflags * 2 + 1;
 };
 
 void() QuadCheat =
 {
-	if (deathmatch)
+	if (deathmatch || coop)
 		return;
 	self.super_time = 1;
 	self.super_damage_finished = time + 30;
 	self.items = self.items | IT_QUAD;
 	dprint ("quad cheat\n");
+};
+
+void() PrintLocation =
+{
+	local string p;
+
+	p = vtos(self.origin);
+
+	sprint(self, "You are at ");
+	sprint(self, p);
+	sprint(self, "\n");
 };
 
 /*
@@ -1229,21 +1314,83 @@ ImpulseCommands
 
 ============
 */
+//ZOID: Note, changed it all to an if/else construct.  No need to check
+//remaining impulses if we have one already.  Much cleaner and a tad
+//more efficient.  Using a non-existant impulse is still the worst case. :(
 void() ImpulseCommands =
 {
-	if (self.impulse >= 1 && self.impulse <= 8)
+ 	if ((self.impulse >= 1 && self.impulse <= 8) || self.impulse == 22 ||
+ 		self.impulse == 50)
 		W_ChangeWeapon ();
 
-	if (self.impulse == 9)
+	else if (self.impulse == 9)
 		CheatCommand ();
-	if (self.impulse == 10)
+
+	else if (self.impulse == 10)
 		CycleWeaponCommand ();
-	if (self.impulse == 11)
+
+	else if (self.impulse == 11)
 		ServerflagsCommand ();
-	if (self.impulse == 12)
+
+	else if (self.impulse == 12)
 		CycleWeaponReverseCommand ();
 
-	if (self.impulse == 255)
+	else if (self.impulse == 99)
+		PrintLocation();
+
+// *TEAMPLAY*
+// If we're allowed to drop items, enable impulse 20 and 21
+	else if ((teamplay & TEAM_DROP_ITEMS) && self.impulse == 20)
+		TossBackpack ();
+
+	else if ((teamplay & TEAM_DROP_ITEMS) && self.impulse == 21)
+		TossWeapon ();
+
+// *TEAMPLAY*
+// Impulse 25 prints info about the current teamplay settings.
+	else if (self.impulse == 25)
+		TeamPrintSettings ();
+
+// ** M U L T I S K I N  1.1  (start)
+
+// modified to not work in teamplay by Zoid, since you can't tell what color
+// people are
+	else if ((teamplay == 0) && ((self.impulse == 200) || (self.impulse == 201))) {
+		if (self.impulse == 200) {
+			self.skin = self.skin + 1;
+			if (self.skin == 19)
+				self.skin = 0;
+		} else if (self.impulse == 201) {
+			self.skin = self.skin - 1;
+			if (self.skin == -1)
+				self.skin = 18;
+		}
+		self.player_flag = self.player_flag - (self.player_flag & 65280);
+		self.player_flag = self.player_flag | (self.skin * 256);
+		if (self.skin == 0) centerprint(self, "SKIN: Quake himself (1)"); else
+		if (self.skin == 1) centerprint(self, "SKIN: Duke Nukem 3d (2)"); else
+		if (self.skin == 2) centerprint(self, "SKIN: Mr. Toad (3)"); else
+		if (self.skin == 3) centerprint(self, "SKIN: the Stormtrooper (4)"); else
+		if (self.skin == 4) centerprint(self, "SKIN: Max (5)"); else
+		if (self.skin == 5) centerprint(self, "SKIN: the Terminator (6)"); else
+		if (self.skin == 6) centerprint(self, "SKIN: Judge Dredd (7)"); else
+		if (self.skin == 7) centerprint(self, "SKIN: Camouflaged soldier (8)"); else
+		if (self.skin == 8) centerprint(self, "SKIN: Captain Picard (9)"); else
+		if (self.skin == 9) centerprint(self, "SKIN: the Wizzard (10)"); else
+		if (self.skin == 10) centerprint(self,"SKIN: the Predator (11)"); else
+		if (self.skin == 11) centerprint(self,"SKIN: Skeleton (12)"); else
+		if (self.skin == 12) centerprint(self,"SKIN: Wan-Fu (13)"); else
+		if (self.skin == 13) centerprint(self,"SKIN: Henry Rollins (14)"); else
+		if (self.skin == 14) centerprint(self,"SKIN: He-Man (15)"); else
+		if (self.skin == 15) centerprint(self,"SKIN: Boba (16)"); else
+		if (self.skin == 16) centerprint(self,"SKIN: Superman (17)"); else
+		if (self.skin == 17) centerprint(self,"SKIN: NYPD Cop (18)"); else
+		if (self.skin == 18) centerprint(self,"SKIN: Red/Yellow women dude (19)");
+	}
+
+// ** M U L T I S K I N  1.1  (end)
+
+	else if (self.impulse == 255)
 		QuadCheat ();
 
 	self.impulse = 0;
@@ -1261,6 +1408,10 @@ void() W_WeaponFrame =
 	if (time < self.attack_finished)
 		return;
 
+//ZOID: Only call ImpulseCommands() if needed!  This saves a good chunk
+//of cpu.  'profile' in console listed ImpulseCommands() as #1 user of
+//cpu (instructions), adding this one line caused it to not even be in
+//the top ten.
 	if (self.impulse)
 		ImpulseCommands ();
 
@@ -1281,10 +1432,9 @@ Plays sound if needed
 */
 void() SuperDamageSound =
 {
-	if (self.super_damage_finished > time)
-	{
-		if (self.super_sound < time)
-		{
+// RUNE play super damage sound if player has Black Magic, too
+	if (self.super_damage_finished > time || (self.player_flag & ITEM_RUNE2_FLAG)) {
+		if (self.super_sound < time) {
 			self.super_sound = time + 1;
 			sound (self, CHAN_BODY, "items/damage3.wav", 1, ATTN_NORM);
 		}
@@ -1292,4 +1442,41 @@ void() SuperDamageSound =
 	return;
 };
 
+/*
+========
+RegenerationSound
+
+Plays sound if needed
+========
+*/
+void() RegenerationSound =
+{
+// RUNE play healing sound if player has Elder Magic
+	if (self.player_flag & ITEM_RUNE4_FLAG) {
+		if (self.regeneration_sound < time) {
+			self.regeneration_sound = time + 1;
+			sound(self, CHAN_BODY, "items/r_item1.wav", 1, ATTN_NORM);
+		}
+	}
+	return;
+};
+
+/*
+========
+HasteSound
+
+Plays sound if needed
+========
+*/
+void() HasteSound =
+{
+// RUNE play haste (Chthon's roar) sound if player has Hell Magic
+	if (self.player_flag & ITEM_RUNE3_FLAG) {
+		if (self.haste_sound < time) {
+			self.haste_sound = time + 2;
+			sound(self, CHAN_BODY, "boss1/sight1.wav", 1, ATTN_NORM);
+		}
+	}
+	return;
+};
 

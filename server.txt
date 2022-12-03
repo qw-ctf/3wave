@@ -1,0 +1,469 @@
+Title    : Threewave Capture
+Filename : 3wave23.zip
+Version  : 2.30
+Date     : 96-10-14
+Author   : Dave 'Zoid' Kirsch
+Email    : zoid@mindlink.net
+Credits  : John Spickes aka Guru <jspickes@eng.umd.edu> for JTEAM
+           Aegis - moral support and general overexcited Quake guy
+           Beowulf - my cat who keeps getting me fragged when he jumps on my
+                     keyboard or starts chasing my mouse
+           "Mike" <amichael@asu.alasu.edu> for Morning Star (Hook)
+           Tom "Bjorn" Klok <tomtom@mindlink.net> for original ideas
+		       such as the runes and capture games, various suggestions
+    		   and bug fixes.  Check his server at quake.mindlink.net,
+    		   204.174.17.22
+
+Type of Mod
+-----------
+Quake C  : yes
+Sound    : no
+MDL      : no
+
+Format of QuakeC
+----------------
+unified diff  : yes
+context diff  : no
+.qc files     : yes
+progs.dat     : yes
+
+[NOTE: The diff is against v1.06 of id's Quake-C code.  This includes
+John Cash's official fixes.   I've tweaked his stuff a bit though.  :)
+I'm running this with a 1.01 server.  I have to do this because there
+isn't a 1.06 server for Linux yet.  But it works fine with the progs.dat
+from 1.06.  Your mileage may vary.
+-Zoid].
+
+[ADMINS:  Remember to edit the hostname in autoexec.cfg!
+I saw several servers out there named "Threewave-Capture".  That's *my*
+server, thank you.  I've changed it so that the default autoexec.cfg
+now contains "hostname PoorlyConfiguredCapture".  So make sure you change
+it or everyone will see your error].
+
+What's new in 2.30
+------------------
+
+- The team you are joined to upon connection is now printed in the MOTD.
+
+- Message changes:  changed a lot of the messages printed to include the
+  flag colour.  Also changed much of the important text to the alternate
+  color font.  This makes it *much* easier to quickly scan the incoming
+  messages and see what's going on.
+
+- New map e2m5: The Wizard's Manse. This level rocks for CTF play.  The
+  bases are pretty well balanced.  NOTE TO ADMINS:  Make sure you copy
+  over the *.bsp files and use dobsp to modify the new maps included in
+  this release.
+
+- Color switching cheating has been greatly reduced, if not removed.  This is
+  where the client would stuff a bunch of commands to change color while
+  attacking.  The color check is now done *before* attack checks so your
+  color gets 'fixed' before you have a chance to hurt a (previous) teammate.
+  Cheaters never prosper.  Besides, stuffing tons of color commands causes
+  lag.  Excellent target for the new 1.06 ban command.
+
+- Bug in the sound generated in by the Earth Rune has been fixed.
+
+- Possible lag problem with the grappling hook has been greatly reduced.
+  Turns out the think time on the chain links was 0.01, which is 100 times
+  a second (ouch!).  It's now 0.1 which cuts it in ten.
+
+- Sound changes for grappling hook:  the sound when the hook makes contact
+  with a wall is now the axe 'clang'. Makes it much more obvious someone
+  is hooking and makes more sense as the hook embeds itself in the wall
+  with a nice satisfying sound.  Also, a small puff sound [Hell Knight
+  missile fire] is played on launching the grapple.
+
+- Fixed it so that if you pick up a weapon while using the grapple, it
+  is *not* made the new weapon.  This was very annoying on levels such as
+  e1m8 where you'd grapple yourself to a rocket launcher suddenly to have
+  it as the selected weapon and you start immediately firing into a nearby
+  wall and usually frag yourself.  I'm sure many people will appreciate
+  this fix.
+
+- Fixed it so that user dropped backpacks (impulse 20) don't immediately
+  get picked up again by the same player.
+
+- Default autoexec.cfg changed to teamplay 483.  This allows impulse 20
+  and 21 to drop backpacks or weapons to teammates.  Very handy for helping
+  out base defenders, "Get me some rockets!"
+
+- Scoring has changed.  After a lot of testing, the following scoring
+  values have been choosen as the defaults.  Note that you can change
+  them in teamplay.qc if you feel necessary.  But they've been through
+  a month of testing and are pretty balanced.  The scores are [from
+  teamplay.qc]:
+	float TEAM_CAPTURE_CAPTURE_BONUS = 12; // what you get for capture
+	float TEAM_CAPTURE_TEAM_BONUS = 12; // what your team gets for capture
+	float TEAM_CAPTURE_RECOVERY_BONUS = 1; // what you get for recovery
+	float TEAM_CAPTURE_FLAG_BONUS = 1; // what you get for picking up enemy flag
+	float TEAM_CAPTURE_FRAG_CARRIER_BONUS = 3; // what you get for fragging
+		//enemy flag carrier
+
+- Self dropped weapons via impulse 21 weren't being removed properly.
+
+- You can't drop a hook with impulse 21 (doing so would crash the server).
+
+- Fixed it so that if Static Teams is not enabled (players can changed teams)
+  and someone changed teams while carrying a flag, the correct flag is
+  dropped.  Before, it would drop the other flag (possibly creating two
+  flags for the team the player was originally on).  Very messy.
+
+What's new in 2.20
+------------------
+
+  Well, the telefrag fixes Cash doesn't work the way I want it to.  It
+  causes repeated telefrags on the "last" spawn spot.  The one from
+  ServerModules was a lot nicer.  I've put that one back in and removed
+  Cash's code.  Also, in 2.1 the server would crash (runaway loop error)
+  if you loaded a map without flag support but TEAM_CAPTURE_FLAG was
+  enabled.
+
+  Fixed it where people could cheat if Static Teams was set (this is
+  usually set like teamplay = 355).  The player could change his color
+  to the other team while touching his flag and he would pick the flag
+  up (!!) then change back.  30 seconds later my SanityCheck routines we
+  notice that there is no flag (must be at base or enemy player) and
+  return it.  This player could then capture his own flag.  It was very
+  ugly.  This wasn't a problem if you didn't have static teams enabled
+  (eg. teamplay 291), since players get gibbed if they change teams.
+
+  If you don't have static teams, when a player changes teams and gets
+  gibbed, the obituary messages is "Player changed teams" instead of the
+  "bored with life".
+
+What's new in 2.10
+------------------
+
+  Ok, the code is now integrated with id's 1.06 Quake-C code.  Minor
+  fixes.  Oh, at end of the level the team totals are counted up
+  and then everyone's frag value is set to the team total.  This
+  way you cleary see which team won.
+  Probably a few other fixes here and there.  It's just better, ok?
+
+Description of the Modification
+-------------------------------
+
+Teamplay (much of this documentation comes from John Spickes Complete
+    Enhanced Teamplay Patches).
+
+        The Complete Enhanced Teamplay is a QuakeC mod which is intended
+        to provide a great deal of flexibility in teamplay settings.  I've
+        retained all of the original functionality of Quake v1.01 and my
+        previous Enhanced Teamplay, and added many more features.  My aim
+        is to have lots of useful teamplay options which the server can
+        select at will, while minimizing my modification to the original
+        QuakeC code.  The options included in this release are:
+
+        * Players' health can be protected from friendly fire damage
+        * Players' armor can be protected from friendly fire damage
+        * Damage inflicted to teammates can be mirrored on the attacker
+        * Frags can be deducted for the killing of teammates
+        * Players can be killed for killing their teammates
+        * Players can be required to use only colors specified by the server
+        * Players can be prohibited from changing teams
+        * Players can be allowed to drop ammo and weapons
+
+        All these options can be turned on and off individually.
+
+        Teamplay feature use:
+
+        A lot of options can be configured with this mod.  The majority of
+        these options are configurable using the teamplay variable.
+        This mod uses the teamplay variable as a bitfield, with each bit
+        associated with a different teamplay option.  The bits are as follows:
+
+        1       Health Protect
+                Players receive no health damage from teammates' attacks.
+        2       Armor Protect
+                Players receive no armor damage from teammates' attacks.
+        4       Damage to Attacker
+                A player who attacks his teammate will receive the same
+                damage the teammate would have received, had he not been
+                protected.
+        8       Frag Penalty
+                Any player who kills his teammate will be penalized frags.
+                The number of frags to penalize is adjustable by a simple
+                edit in the teamplay.qc file.
+        16      Death Penalty
+                Any player who kills his teammate will burst apart in a
+                bloody mess.
+        32      Team Color Lock
+                Players will only be allowed to be certain colors.  Team
+                colors can be specified for up to four teams in the
+                teamplay.qc file.  Players who have illegal colors
+                when they enter will be put into the team with the fewest
+                members.  Any player who changes team (pants color) will
+                be fragged and their frag count is reset to zero.
+        64      Static Teams
+                Players will not be allowed to change teams.
+        128        Drop Items
+                Players will be allowed to drop ammo and weapons.
+                IMPULSE 20 will drop a backpack and IMPULSE 21 will
+                drop the current weapon.  You can't drop the axe or
+                single-shotgun.
+        256        Capture the Flag
+                This enables Capture the Flag support.
+
+        Obviously, not all these options make sense together.  teamplay 9
+        doesn't really make sense, because you couldn't ever kill a
+        teammate, and thus you could never incur the one frag penalty.
+        To select multiple options, add the numbers of the options together.
+
+        Examples:
+        teamplay 96     Team Color Lock, Static Teams
+                This results in players being automatically assigned to
+                teams and not allowed to change to other teams.
+        teamplay 3      Health Protect, Armor Protect
+                You can't hurt your teammates' health OR armor.
+        teamplay 28     Mirror Damage, Frag Penalty, Death Penalty
+                When you shoot your teammates, you take damage and so
+                do they.  If you kill a teammate, you'll take a frag
+                penalty and you'll be killed.
+        teamplay 120    Static Teams, Color Lock, Frag Penalty, Death Penalty
+        teamplay 355    Static Teams, Color Lock, Health Protect, Armour
+                Protect, Capture the Flag
+
+        [I use teamplay 355 on my server.  You must have team color lock
+        for capture the flag.  Anything else is very confusing. -Zoid]
+
+        Besides the teamplay setting, there are some other options that can
+        be modified by editing the source.  These options are constants at
+        the beginning of teamplay.qc and are marked so you can find them.
+        One option specifies the default frag penalty.  This is the number
+        of frags that will be deducted by the bit-field Frag Penalty setting.
+
+        There are four constants in teamplay.qc which allow configuration of
+        the teamlock settings.  TEAM_COLOR1 thru TEAM_COLOR4 have values
+        indicating a legal team color, or -1.  A value of -1 indicates that
+        this team is not used.  Thus, the number of teams is adjustable
+        from 1 to 4.
+
+        Example:
+
+        float   TEAM_COLOR1 =   4;
+        float   TEAM_COLOR2 =   13;
+        float   TEAM_COLOR3 =   -1;
+        float   TEAM_COLOR4 =   -1;
+
+        This setting indicates that there should be two teams.  Team 1's
+        color is red and team 2's color is blue.  Teams 3 & 4 are not used
+        and thus have a value of -1.
+
+        NOTE: If you enable Capture the Flag, you MUST HAVE ONLY TWO
+        TEAMS defined.  TEAM_COLOR3 and TEAM_COLOR4 MUST be set to
+        -1.  If you don't, results are unpredictable.
+
+        If you change any of the constant values, you must recompile before
+        your changes will take effect.
+
+                      THE COMPLETE ENHANCED TEAMPLAY
+
+                              Programming by
+                          John Spickes aka Guru
+                          jspickes@eng.umd.edu
+        [Please direct any comments about this package to *me*, Zoid at
+        zoid@mindlink.net.  Don't bug John about my mods].
+
+Capture the Flag
+
+   Capture the flag offers an exciting variation on team play.  It gives
+   meaning to base defense along with offensive positioning and strikes.
+   The implementation is an extension of John Spickes JTEAM patches.
+
+   The basic premise is: attack the enemy base, grab their flag than
+   take it back to your base.  In the variation I've written into Quake,
+   you must touch your base flag when carrying the enemy flag in order
+   to score.
+
+   Map modifications have to be done in order to enable Capture the Flag
+   play on a map.  See the accompaning file capture.txt for information
+   on how to modify maps for flag support.
+
+   Rules:
+
+   - Two sections of the map are designated as base encampments.
+   - When you join the game (or enter the level) you are assigned to a
+     team (Using John Spickes JTEAM patches, with many modifications).
+     Changing teams may or may not be allowed depending on the setting
+     of the teamplay variable.  You are spawned at the base (this is were
+     my map mods come in).  If you die, you are not spawned at the base,
+     but at one of the deathmatch start spots.
+      This way, you don't kill a guy trying to get the flag at the base and he
+     comes back to life immediately there.
+   - The flags are based on the key models.  If you pick up the enemy flag,
+     you must touch your flag in order to win.  Note that if you get
+     back to the base, your flag might not be there if the other team
+     has it!  Get the rest of your team to go get their flag back!  The
+     player who touches his base flag when carrying the other team's gets
+     20 frags, and everyone on his team gets 10 frags.
+     Also, when you get a flag, you have that nice glow around you (such as
+     when you get the quad damage.) If you kill an opposing team player who
+     has your flag, he drops it.  If you touch your flag, it will teleport
+     back to your base.
+   - Since everyone starts at their base after level change, or joining the
+     game, the team will have to work out who is going to go and try to get
+     the enemy flag (offensive strike), and who will stay to defend.
+     Yes, this is camping, but its camping with a cause!  Remember, you can
+     communicate only with teammates by using messagemode2.  Put this in your
+     id1\autoexec.cfg file
+        bind r "messagemode2"
+     When you hit "r", you will get the usually talk prompt, except your
+     message will only go to your teammates.
+
+Random Level Selection
+   Next level is chosen randomly (RandomLevel in client.qc).  The levels
+   e1m7 (House of Chthon), e2m6 (The Dismal Oubliette), e3m4 (Satan's
+   Dark Delight) and end (Shub-Niggurath's Pit) removed since they are
+   really suck for DM games, though e1m7 is a nice MD level, but causes
+   massive lag for some reason.
+   NOTE: In Capture the Flag mode, the levels proceed as follows:
+   e1m1, e1m2, e1m3, e1m4, e1m5, e1m6, e1m8, e2m1, e2m2, e2m3.
+   These are currently the only levels modified with flag support.
+
+Runes
+   The rune game (several functions near the end of items.qc).  Runes are
+   spawned randomly, one of each with an unique power.  Currently there are
+   four:
+     - Earth (resistance, half damage)
+     - Black (strength, double damage)
+     - Hell (haste, double fire rate)
+     - Elder (regeneration) magic runes
+   When someone dies, the rune pops out and can be picked up.  You can only
+   carry one rune at a time.
+
+MOTD
+   MOTD (Message of the day) function added.  To change it edit client.qc
+   and edit the text near the top.  There are different messages for
+   regular deathmatch, team mode and capture the flag mode.
+
+Multiskin
+   Skins, along with fixes for MultiSkin 1.1 that makes it so that
+   corpses get the right skin and skins are presistant across levels.
+   Also changed so that skins are not available in teamplay, since you
+   can't tell what color people are with many of the skins.
+   NOTE:  Skins are not enabled in teamplay mode (including Capture the
+   Flag).  This is because most skins don't change colors properly.
+   Skin based teams are something I am considering.
+
+Suicide protection.
+   A person can suicide four times, then can't suicide anymore.
+   Resets after level change (there are legitmate reasons to suicide,
+   but rarely more than four times in a level).
+
+Telefrag Delay
+   When telefragged, the person who was killed stays dead for two to
+   five seconds.  This is needed to get rid of the "frag snowball" effect
+   one sees at the beginning of a new level, when 16 players try to
+   fit into five deathmatch spots.  The telefrags would snowball and
+   eventually crash the server.  With this delay, its eliminated.
+
+Server Logging
+   Server logging.  This is really useful in for a Linux server, since
+   I save the log files.  Reports on why a client connects, how they died,
+   etc.  This is still being fine tuned.
+
+[THIS IS CURRENTLY REMOVED--
+  Since I went to 1.06 and had to re-write most of the code, I ripped
+  what was left of this out.  I'll put re-integrating it shortly, since
+  Ron's now got a 1.06 version of his TeleWeapon stuff out that fixes
+  some of the original problems.]
+//TeleWeapon
+//   Incorporated Ron Mercer's teleweapon patch. This makes it so stuff like
+//   rockets, grenades, nails, etc. go through teleporters.  It also fixes
+//   the lighting gun discharge in water bug, where if you are near the water
+//   (but not in) you get hosed.
+//   NOTE: The teleporting weapons are disabled.  They cause the server to
+//   crash.  I have kept the lightning gun fixes in.
+
+Grappling Hook
+   New weapon added.  "Mike" <amichael@asu.alasu.edu> Morning Star, renamed
+   to grappling hook.  Changed to use existing models (vore ball for hook,
+   spikes for the chain links).  This weapon lets you hook the ceiling and
+   get pulled toward it (think of Batman's grapple in the movies).  You can
+   also hang from the ceiling and snipe at people.  Don't worry, its doesn't
+   make camping any more effective, as a rocket at the ceiling usually
+   deals with anyone handing around.  :)
+   IMPULSE 22 or select axe twice.
+
+Redundant Message Removal
+   Removed redundant messages such as "You got the shells" or "You got the
+   armor."  This was just cluttering up the message stream and isn't needed
+   since pickups are already signified by a flash and an audio cue.
+
+[No longer using ServerModules telefrag removal--now using the 1.06 code
+by John Cash].
+
+How to Install the Modification
+-------------------------------
+Make a new dir in your quake directory. (ie c:\quake\capture)
+then unzip this package into that directory (make sure you use -d with
+pkunzip!).  When done, you'll have the following files:
+
+    ./progs.dat ./autoexec.cfg ./config.cfg ./readme.txt
+    ./capture.txt ./capture.dif
+
+    ./src/ai.qc ./src/amtest.qc ./src/boss.qc ./src/buttons.qc
+    ./src/client.qc ./src/combat.qc ./src/defs.qc ./src/demon.qc
+    ./src/dog.qc ./src/doors.qc ./src/enforcer.qc ./src/fight.qc
+    ./src/fish.qc ./src/hknight.qc ./src/hook.qc ./src/items.qc
+    ./src/jctest.qc ./src/knight.qc ./src/misc.qc ./src/models.qc
+    ./src/monsters.qc ./src/ogre.qc ./src/oldone.qc ./src/plats.qc
+    ./src/player.qc ./src/progdefs.h ./src/progs.dat ./src/progs.src
+    ./src/shalrath.qc ./src/shambler.qc ./src/soldier.qc ./src/sprites.qc
+    ./src/subs.qc ./src/tarbaby.qc ./src/teamplay.qc ./src/triggers.qc
+    ./src/weapons.qc ./src/wizard.qc ./src/world.qc ./src/zombie.qc
+    ./src/files.dat ./src/telefrag.qc ./src/flame.qc
+
+    ./maps/e1m4.ent ./maps/e1m8.ent ./maps/e1m1.ent ./maps/e1m2.ent
+    ./maps/e1m3.ent ./maps/e1m6.ent ./maps/e1m5.ent ./maps/e2m1.ent
+    ./maps/e2m2.ent ./maps/e2m3.ent ./maps/dobsp.bat ./maps/dobsp.sh
+
+You must modify several maps for Quake in order to use capture the flag.
+You must unpack your pak0.pak and pak1.pak files.  There are several
+utilities to do this.  For Linux, I use wreckdum
+(ftp://ftp.cdrom.com/pub/quake/utils/bsp_pak_tools/wreckdum.tar.gz)
+and under Windows 95 I use winpak
+(http://www.cdrom.com/pub/quake/utils/bsp_pak_tools/winpak12.zip).
+
+In the directory you unpacked this archive, there will be maps directory.
+Copy the following files you unpacked from the pak0.pak and pak1.pak
+files into the maps directory in the capture stuff:
+    e1m1.bsp e1m2.bsp e1m3.bsp e1m4.bsp e1m5.bsp e1m6.bsp e1m8.bsp
+    e2m1.bsp e2m2.bsp e2m3.bsp
+Now go to the maps directory and either run dobsp.bat for DOS/Win95 or
+sh dobsp.sh for Linux.  Note that qbsp must be in your path.  qbsp comes
+from id and you can get it at:
+http://www.cdrom.com/pub/quake/idstuff/source/qutils.zip
+This will modify the entity lists for the maps to include the new
+flags and some other items.
+[NOTE: This would be a bit easier if I could distribute the already modified
+bsp files, but id's licensing does not permit that.  I emailed Jay Wilbur
+(the biz guy) about this and his response was:
+        There is no problem in what you intend to do if the file you intend
+        to distribute is nothing more then a glorified text file that
+        registered server running users use to modify their maps.
+So that's the official party line].
+
+Once you have all the modified bsp files in the maps directory (they
+are all pretty big).  Run the server as so:
+
+         ./xquake -dedicated 16 -game 3wave
+         or
+         winded -dedicated 16 -game 3wave
+
+Copyright and Distribution Permissions
+--------------------------------------
+
+Authors MAY use these modifications as a basis for other
+publically available work.
+
+You may do whatever you please with the contents of this archive.
+
+Availability
+------------
+
+This modification is available from the following places:
+
+WWW   : http://quake.threewave.com
+

@@ -381,7 +381,6 @@ local vector	org;
 // only teleport living creatures
 	if (other.health <= 0 || other.solid != SOLID_SLIDEBOX)
 		return;
-
 	SUB_UseTargets ();
 
 // put a tfog where the player was
@@ -405,13 +404,14 @@ local vector	org;
 		other.velocity = (v_forward * other.velocity_x) + (v_forward * other.velocity_y);
 		return;
 	}
-
 	setorigin (other, t.origin);
 	other.angles = t.mangle;
+
 	if (other.classname == "player")
 	{
 		other.fixangle = 1;		// turn this way immediately
 		other.teleport_time = time + 0.7;
+
 		if (other.flags & FL_ONGROUND)
 			other.flags = other.flags - FL_ONGROUND;
 		other.velocity = v_forward * 300;

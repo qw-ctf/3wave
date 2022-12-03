@@ -6,8 +6,66 @@ void() player_pain;
 void() player_stand1;
 void (vector org) spawn_tfog;
 void (vector org, entity death_owner) spawn_tdeath;
+string(string old) RandomLevel;
 
 float	modelindex_eyes, modelindex_player;
+
+void() MOTD =
+{
+	if (self.motd_count < 5) {
+		self.motd_time = time + 1;
+		self.motd_count = self.motd_count + 1;
+		if (teamplay & TEAM_CAPTURE_FLAG)
+			if (self.team == TEAM_COLOR1 + 1)
+				centerprint(self, "Welcome to Quake.ThreeWave.COM\nYour admin is Zoid.\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
+			else
+				centerprint(self, "Welcome to Quake.ThreeWave.COM\nYour admin is Zoid.\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
+		else if (teamplay)
+			centerprint(self, "Welcome to Quake.ThreeWave.COM\nYour admin is Zoid.\n\nTEAMPLAY IS ACTIVE");
+		else
+			centerprint(self, "Welcome to Quake.ThreeWave.COM\nYour admin is Zoid.");
+		return;
+	} else {
+		sprint(self, "Info: http://quake.threewave.com/\n");
+		if (teamplay)
+			sprint(self, "Impulse 25 for Team Settings\n");
+		if (teamplay & TEAM_CAPTURE_FLAG)
+			sprint(self, "You are playing цаптуре тхе флаг!\n"); // CAPTURE THE FLAG
+	}
+	self.motd_time = 0;
+};
+
+// ZOID: with several effects doing the dimlight thing, they just can't
+// turn it off.  Do not set self.effects with EF_DIMLIGHT directly.  This
+// will automatically do it when CheckPowerups is called
+// EF_DIMLIGHT is used;
+// 1. Invincible (Pentagram)
+// 2. Super Damage (Quad Power)
+// 3. Having Flag in Capture
+// 4. On fire (flamethrower)
+// self is player
+void () CheckDimLight = {
+	local float flag;
+
+	flag = 0;
+	// invincable
+	if (self.invincible_finished > time)
+		flag = 1;
+	// quad
+	if (self.super_damage_finished > time)
+		flag = 1;
+	// flag
+	if (self.player_flag & ITEM_ENEMY_FLAG)
+		flag = 1;
+	// On fire
+	if (self.onfire)
+		flag = 1;
+
+	if (flag)
+		self.effects = self.effects | EF_DIMLIGHT;
+	else
+		self.effects = self.effects - (self.effects & EF_DIMLIGHT);
+};
 
 /*
 =============================================================================
@@ -59,11 +117,14 @@ void() SetChangeParms =
 	parm7 = self.ammo_cells;
 	parm8 = self.weapon;
 	parm9 = self.armortype * 100;
+// *TEAMPLAY*
+	parm10 = self.lastteam;	// Save the current team of the player
+	parm16 = self.player_flag;
 };
 
 void() SetNewParms =
 {
-	parm1 = IT_SHOTGUN | IT_AXE;
+	parm1 = IT_SHOTGUN | IT_AXE | IT_HOOK;
 	parm2 = 100;
 	parm3 = 0;
 	parm4 = 25;
@@ -72,12 +133,22 @@ void() SetNewParms =
 	parm7 = 0;
 	parm8 = 1;
 	parm9 = 0;
+// *TEAMPLAY*
+	parm10 = -1;	// Reset
+	parm16 = 0;
 };
 
 void() DecodeLevelParms =
 {
-//	if (serverflags)
-	if (!deathmatch)
+	self.player_flag = parm16;
+	self.player_flag = self.player_flag - (self.player_flag & ITEM_RUNE_MASK);
+	self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
+	if (teamplay == 0)
+		self.skin = (self.player_flag & 65280)/256;
+	else
+		self.skin = 0; // default to the Quake dude
+
+	if (serverflags)
 	{
 		if (world.model == "maps/start.bsp")
 			SetNewParms ();		// take away all stuff on starting new episode
@@ -92,6 +163,9 @@ void() DecodeLevelParms =
 	self.ammo_cells = parm7;
 	self.weapon = parm8;
 	self.armortype = parm9 * 0.01;
+// *TEAMPLAY*
+	if(TeamColorIsLegal(parm10 - 1))
+		self.lastteam = parm10;
 };
 
 /*
@@ -132,8 +206,6 @@ entity() FindIntermission =
 		return spot;
 
 	objerror ("FindIntermission: no spot");
-
-	return world;
 };
 
 
@@ -261,7 +333,7 @@ void() execute_changelevel =
 
 // enforce a wait time before allowing changelevel
 	if (deathmatch)
-		intermission_exittime = time + 5;
+		intermission_exittime = time + 8;
 	else
 		intermission_exittime = time + 2;
 
@@ -297,6 +369,9 @@ void() changelevel_touch =
 	if (other.classname != "player")
 		return;
 
+	if ((cvar("noexit") == 1) && (teamplay & TEAM_CAPTURE_FLAG))
+		return;
+
 	if ((cvar("noexit") == 1) || ((cvar("noexit") == 2) && (mapname != "start")))
 	{
 		T_Damage (other, self, self, 50000);
@@ -309,7 +384,11 @@ void() changelevel_touch =
 		bprint (" exited the level\n");
 	}
 
-	nextmap = self.map;
+// ZOID - go to next level randomly
+	if (deathmatch)
+		nextmap = RandomLevel(mapname);
+	else
+		nextmap = self.map;
 
 	SUB_UseTargets ();
 
@@ -333,7 +412,7 @@ When the player touches this, he gets sent to the map listed in the "map" variab
 void() trigger_changelevel =
 {
 	if (!self.map)
-		objerror ("changelevel trigger doesn't have map");
+		objerror ("chagnelevel trigger doesn't have map");
 
 	InitTrigger ();
 	self.touch = changelevel_touch;
@@ -387,13 +466,25 @@ Player entered the suicide command
 */
 void() ClientKill =
 {
-	if ((intermission_running)&&((coop)||(deathmatch)))  // not allowed during intermission
+	if (self.suicide_count > 3) {
+		sprint(self, "You have suicided too much already.\n");
 		return;
+	}
 	bprint (self.netname);
 	bprint (" suicides\n");
+	DropRune();
+	TeamCaptureDropFlag();
 	set_suicide_frame ();
 	self.modelindex = modelindex_player;
 	self.frags = self.frags - 2;	// extra penalty
+	self.suicide_count = self.suicide_count + 1;
+	respawn ();
+};
+
+void() SilentKill =
+{
+	set_suicide_frame ();
+	self.modelindex = modelindex_player;
 	respawn ();
 };
 
@@ -412,8 +503,6 @@ Returns the entity to spawn at
 entity() SelectSpawnPoint =
 {
 	local	entity spot;
-	local	entity thing;
-	local	float  pcount;
 
 // testinfo_player_start is only found in regioned levels
 	spot = find (world, classname, "testplayerstart");
@@ -431,29 +520,16 @@ entity() SelectSpawnPoint =
 	}
 	else if (deathmatch)
 	{
-		spot = lastspawn;
-		while (1)
-		{
-			spot = find(spot, classname, "info_player_deathmatch");
+		if (!self.killed) {
+			spot = TeamCaptureSpawn();
 			if (spot != world)
-			{
-				if (spot == lastspawn)
-					return lastspawn;
-				pcount = 0;
-				thing = findradius(spot.origin, 32);
-				while(thing)
-				{
-					if (thing.classname == "player")
-						pcount = pcount + 1;
-					thing = thing.chain;
-				}
-				if (pcount == 0)
-				{
-					lastspawn = spot;
-					return spot;
-				}
-			}
+				return spot;
 		}
+		lastspawn = find(lastspawn, classname, "info_player_deathmatch");
+		if (lastspawn == world)
+			lastspawn = find (lastspawn, classname, "info_player_deathmatch");
+		if (lastspawn != world)
+			return lastspawn;
 	}
 
 	if (serverflags)
@@ -486,6 +562,9 @@ void() PutClientInServer =
 	local	entity spot;
 
 	spot = SelectSpawnPoint ();
+//ZOID: Minimize chance of telefragging someone, from Johannes Plass
+//(plass@dipmza.physik.uni-mainz.de) ServerModules package
+	spot = TelefragSelectSpawnPoint(spot);
 
 	self.classname = "player";
 	self.health = 100;
@@ -503,6 +582,12 @@ void() PutClientInServer =
 	self.invincible_finished = 0;
 	self.effects = 0;
 	self.invincible_time = 0;
+	self.staydeadtime = 0;
+	self.regen_time = 0;
+	self.rune_notice_time = 0;
+
+	// Flamethrower - just to be sure
+	self.onfire = FALSE;
 
 	DecodeLevelParms ();
 
@@ -518,8 +603,7 @@ void() PutClientInServer =
 
 //	spot = SelectSpawnPoint ();
 
-//	self.origin = spot.origin + '0 0 1';
-	self.origin = self.oldorigin = spot.origin + '0 0 1';	// 1998-07-21 Respawning where player died fix by Robert Field
+	self.origin = spot.origin + '0 0 1';
 	self.angles = spot.angles;
 	self.fixangle = TRUE;		// turn this way immediately
 
@@ -534,8 +618,6 @@ void() PutClientInServer =
 
 	self.view_ofs = '0 0 22';
 
-	self.velocity = '0 0 0';	// 1998-07-21 Player moves after respawn fix by Xian
-
 	player_stand1 ();
 
 	if (deathmatch || coop)
@@ -545,6 +627,40 @@ void() PutClientInServer =
 	}
 
 	spawn_tdeath (self.origin, self);
+
+// *********************************************************************
+// **								          **
+// ** M U L T I S K I N  1.1  (start)                                  **
+// **									  **
+// ***********************************************************************
+
+	if (teamplay == 0) {
+		if (self.skin == 0) centerprint(self, "Mr. Quake himself!"); else
+		if (self.skin == 1) centerprint(self, "No time to play with yourself here!"); else
+		if (self.skin == 2) centerprint(self, "You're one pretty toad!"); else
+		if (self.skin == 3) centerprint(self, "Wow Stormtrooper, you're though!"); else
+		if (self.skin == 4) centerprint(self, "Hi Max, looking yellow/blue today!"); else
+		if (self.skin == 5) centerprint(self, "You are back!"); else
+		if (self.skin == 6) centerprint(self, "Judge Dredd! Let's restore some order!"); else
+		if (self.skin == 7) centerprint(self, "Camo! Can't see you, where are you!"); else
+		if (self.skin == 8) centerprint(self, "Okay Captain Picard, make it so!"); else
+		if (self.skin == 9) centerprint(self, "Whizz whizz.. Wizzard!"); else
+		if (self.skin == 10) centerprint(self,"I'm the Predator, you're the prey!"); else
+		if (self.skin == 11) centerprint(self,"Welcome Skeleton, looking good!"); else
+		if (self.skin == 12) centerprint(self,"Wan-Fu, whoever you are :)"); else
+		if (self.skin == 13) centerprint(self,"Oh no, it's Henry Rollins!"); else
+		if (self.skin == 14) centerprint(self,"Ooh no, it's She.. eh.. He-Man"); else
+		if (self.skin == 15) centerprint(self,"If it isn't Boba, go get Han Solo!"); else
+		if (self.skin == 16) centerprint(self,"It's SUPERMAN!"); else
+		if (self.skin == 17) centerprint(self,"Protect the innocent, uphold your law"); else
+		if (self.skin == 18) centerprint(self,"Why is that symbol on your suit?");
+	}
+
+// *************************************************************************
+// **								          **
+// ** M U L T I S K I N  1.1  (end)                                       **
+// **									  **
+// *************************************************************************
 };
 
 
@@ -573,6 +689,8 @@ void() info_player_start2 =
 };
 
 
+void() SpawnRunes;
+
 /*
 saved out by quaked in region mode
 */
@@ -584,6 +702,22 @@ void() testplayerstart =
 potential spawning position for deathmatch games
 */
 void() info_player_deathmatch =
+{
+	local entity rspawn;
+
+	if (deathmatch) {
+		// spawn the runes
+		rspawn = spawn();
+		rspawn.nextthink = time + 0.1;
+		rspawn.think = SpawnRunes;
+	}
+};
+
+void() info_player_team1 =
+{
+};
+
+void() info_player_team2 =
 {
 };
 
@@ -642,16 +776,21 @@ void() NextLevel =
 	}
 	else
 	{
+//ZOID: RandomLevel is called.  Note that RandomLevel handles Capture
+//levels as well.
+		o = spawn();
+		o.map = RandomLevel(mapname);
+
 		// find a trigger changelevel
-		o = find(world, classname, "trigger_changelevel");
+//		o = find(world, classname, "trigger_changelevel");
 
 		// go back to start if no trigger_changelevel
-		if (!o)
-		{
-			mapname = "start";
-			o = spawn();
-			o.map = mapname;
-		}
+//		if (!o)
+//		{
+//			mapname = "start";
+//			o = spawn();
+//			o.map = mapname;
+//		}
 	}
 
 	nextmap = o.map;
@@ -662,6 +801,78 @@ void() NextLevel =
 		o.think = execute_changelevel;
 		o.nextthink = time + 0.1;
 	}
+
+};
+
+// Return a new random level, that doesn't match old
+string(string old) RandomLevel =
+{
+local float r;
+
+	r = random();
+	if (teamplay & TEAM_CAPTURE_FLAG) {
+		// capture levels
+		if (old == "e1m1") return "e1m2";
+		if (old == "e1m2") return "e1m3";
+		if (old == "e1m3") return "e1m4";
+		if (old == "e1m4") return "e1m5";
+		if (old == "e1m5") return "e1m6";
+		if (old == "e1m6") return "e1m8";
+		if (old == "e1m8") return "e2m1";
+		if (old == "e2m1") return "e2m2";
+		if (old == "e2m2") return "e2m3";
+		if (old == "e2m3") return "e2m5";
+		if (old == "e2m5") return "e4m3";
+		return "e1m1";
+	}
+	if (r > 0.8) {
+		r = random() * 7;
+		if ((r >= 6) && (old != "e1m1")) return ("e1m1"); // e1m1: Slipgate Complex -- by John Romero
+		if ((r >= 5) && (old != "e1m2")) return ("e1m2"); // e1m2: Castle of the Damned -- by Tim Willits
+		if ((r >= 4) && (old != "e1m3")) return ("e1m3"); // e1m3: The Necropolis -- by Tim Willits
+		if ((r >= 3) && (old != "e1m4")) return ("e1m4"); // e1m4: The Grisly Grotto -- by Tim Willits
+		if ((r >= 2) && (old != "e1m5")) return ("e1m5"); // e1m5: Gloom Keep -- by Tim Willits
+		if ((r >= 1) && (old != "e1m6")) return ("e1m6"); // e1m6: The Door To Chthon -- by American McGee
+// e1m7: The House of Chthon -- removed because of lag problems
+		return ("e1m8"); // e1m8: Ziggurat Vertigo --by American McGee
+	} else if (r > 0.6) {
+		r = random() * 6;
+		if ((r >= 5) && (old != "e2m1")) return ("e2m1"); // e2m1: The Installation -- by John Romero
+		if ((r >= 4) && (old != "e2m2")) return ("e2m2"); // e2m2: Ogre Citadel -- by John Romero
+		if ((r >= 3) && (old != "e2m3")) return ("e2m3"); // e2m3: Crypt of Decay -- by John Romero
+		if ((r >= 2) && (old != "e2m4")) return ("e2m4"); // e2m4: The Ebon Fortress  -- by John Romero
+		if ((r >= 1) && (old != "e2m5")) return ("e2m5"); // e2m5: The Wizard's Manse -- by John Romero
+// e2m6: The Dismal Oubliette -- removed because it sucks for dm
+		return ("e2m7"); // e2m7: Underearth --by Tim Willits
+	} else if (r > 0.4) {
+		r = random() * 6;
+		if ((r >= 5) && (old != "e3m1")) return ("e3m1"); // e3m1: Termination Central -- by John Romero
+		if ((r >= 4) && (old != "e3m2")) return ("e3m2"); // e3m2: The Vaults of Zin -- by American McGee
+		if ((r >= 3) && (old != "e3m3")) return ("e3m3"); // e3m3: The Tomb of Terror -- by American McGee
+// e3m4 (Satan's Dark Delight) removed because it sucks for dm
+		if ((r >= 2) && (old != "e3m5")) return ("e3m5"); // e3m5: Wind Tunnels --by Tim Willits
+		if ((r >= 1) && (old != "e3m6")) return ("e3m6"); // e3m6: Chambers of Torment -- by American McGee & Tim Willits
+		return ("e3m7"); // e3m7: The Haunted Halls -- by American McGee
+	} else if (r > 0.2) {
+		r = random() * 8;
+		if ((r >= 7) && (old != "e4m1")) return ("e4m1"); // e4m1: The Sewage System -- by Tim Willits
+		if ((r >= 6) && (old != "e4m2")) return ("e4m2"); // e4m2: The Tower of Despair --by Sandy Petersen
+		if ((r >= 5) && (old != "e4m3")) return ("e4m3"); // e4m3: The Elder God Shrine --by Sandy Petersen
+		if ((r >= 4) && (old != "e4m4")) return ("e4m4"); // e4m4: The Palace of Hate --by Sandy Petersen
+		if ((r >= 3) && (old != "e4m5")) return ("e4m5"); // e4m5: Hell's Atrium --by Sandy Petersen
+		if ((r >= 2) && (old != "e4m6")) return ("e4m6"); // e4m6: The Pain Maze --by Sandy Petersen
+		if ((r >= 1) && (old != "e4m7")) return ("e4m7"); // e4m7: Azure Agony --by Sandy Petersen
+		return ("e4m8"); // e4m8: The Nameless City -- by Sandy Petersen
+	} else {
+		r = random() * 6;
+		if ((r >= 5) && (old != "dm1")) return ("dm1"); // dm1: Place of Two Deaths --by Tim Willits
+		if ((r >= 4) && (old != "dm2")) return ("dm2"); // dm2: Claustrophobopolis --by American McGee
+		if ((r >= 3) && (old != "dm3")) return ("dm3"); // dm3: The Abandoned Base --by John Romero
+		if ((r >= 2) && (old != "dm4")) return ("dm4"); // dm4: The Bad Place --by American McGee
+		if ((r >= 1) && (old != "dm5")) return ("dm5"); // dm5: The Cistern --by Tim Willits
+		return ("dm6"); // dm6: The Dark Zone --by Tim Willits
+	}
+	return("start");
 };
 
 /*
@@ -682,15 +893,13 @@ void() CheckRules =
 	timelimit = cvar("timelimit") * 60;
 	fraglimit = cvar("fraglimit");
 
-//	if (timelimit && time >= timelimit)
-	if (deathmatch && timelimit && time >= timelimit)	// 1998-07-27 Timelimit/Fraglimit fix by Maddes
+	if (timelimit && time >= timelimit)
 	{
 		NextLevel ();
 		return;
 	}
 
-//	if (fraglimit && self.frags >= fraglimit)
-	if (deathmatch && fraglimit && self.frags >= fraglimit)	// 1998-07-27 Timelimit/Fraglimit fix by Maddes
+	if (fraglimit && self.frags >= fraglimit)
 	{
 		NextLevel ();
 		return;
@@ -896,6 +1105,7 @@ void() CheckWaterJump =
 			return;
 		}
 	}
+
 };
 
 
@@ -916,14 +1126,28 @@ void() PlayerPreThink =
 		IntermissionThink ();	// otherwise a button could be missed between
 		return;					// the think tics
 	}
+	if (self.staydeadtime && self.staydeadtime > time)
+		return;// wait a bit before respawn
+
+// *TEAMPLAY*
+	if (coop && TEAM_STRICT_COOP)
+		return;
 
 	if (self.view_ofs == '0 0 0')
 		return;		// intermission or finale
 
 	makevectors (self.v_angle);		// is this still used
 
+	if (self.motd_time && self.motd_time < time)
+		MOTD();
+
 	CheckRules ();
 	WaterMove ();
+
+// *TEAMPLAY*
+// TeamCheckLock performs all necessary teamlock checking, and performs all
+// actions needed.
+	TeamCheckLock();
 
 	if (self.waterlevel == 2)
 		CheckWaterJump ();
@@ -948,7 +1172,18 @@ void() PlayerPreThink =
 	if (time < self.pausetime)
 		self.velocity = '0 0 0';
 
-	if(time > self.attack_finished && self.currentammo == 0 && self.weapon != IT_AXE)
+// RUNE: If player has rune of elder magic (4), regeneration
+	if (self.player_flag & ITEM_RUNE4_FLAG) {
+		if (self.health < 100 && self.regen_time < time) {
+			self.health = self.health + 2;
+			self.regen_time = time + 0.5;
+			RegenerationSound();
+		}
+	}
+// RUNE
+
+	if(time > self.attack_finished && self.currentammo == 0 &&
+		self.weapon != IT_AXE && self.weapon != IT_HOOK)
 	{
 		self.weapon = W_BestWeapon ();
 		W_SetCurrentAmmo ();
@@ -1036,10 +1271,12 @@ void() CheckPowerups =
 			self.invincible_time = 0;
 			self.invincible_finished = 0;
 		}
-		if (self.invincible_finished > time)
-			self.effects = self.effects | EF_DIMLIGHT;
-		else
-			self.effects = self.effects - (self.effects & EF_DIMLIGHT);
+// ZOID, next line isn't needed, EF_DIMLIGHT is handled by
+// client.qc:CheckDimLight
+//		if (self.invincible_finished > time)
+//			self.effects = self.effects | EF_DIMLIGHT;
+//		else
+//			self.effects = self.effects - (self.effects & EF_DIMLIGHT);
 	}
 
 // super damage
@@ -1071,10 +1308,12 @@ void() CheckPowerups =
 			self.super_damage_finished = 0;
 			self.super_time = 0;
 		}
-		if (self.super_damage_finished > time)
-			self.effects = self.effects | EF_DIMLIGHT;
-		else
-			self.effects = self.effects - (self.effects & EF_DIMLIGHT);
+// ZOID, next line isn't needed, EF_DIMLIGHT is handled by
+// client.qc:CheckDimLight
+//		if (self.super_damage_finished > time)
+//			self.effects = self.effects | EF_DIMLIGHT;
+//		else
+//			self.effects = self.effects - (self.effects & EF_DIMLIGHT);
 	}
 
 // suit
@@ -1108,6 +1347,8 @@ void() CheckPowerups =
 		}
 	}
 
+	// Check to see about DIMLIGHT effects
+	CheckDimLight();
 };
 
 
@@ -1122,6 +1363,8 @@ void() PlayerPostThink =
 {
 	local	float	mspeed, aspeed;
 	local	float	r;
+
+        local   string  num;
 
 	if (self.view_ofs == '0 0 0')
 		return;		// intermission or finale
@@ -1153,6 +1396,7 @@ void() PlayerPostThink =
 		self.jump_flag = self.velocity_z;
 
 	CheckPowerups ();
+
 };
 
 
@@ -1167,6 +1411,26 @@ void() ClientConnect =
 {
 	bprint (self.netname);
 	bprint (" entered the game\n");
+
+	dprint("Client ");
+	dprint(self.netname);
+	dprint(" added\n");
+
+	self.motd_time = time + 3;
+	self.motd_count = 0;
+
+	self.suicide_count = 0;
+	self.killed = 0;
+
+// *TEAMPLAY*
+ 	// If this is our first connection, parm10 is < 0
+ 	// Set lastteam negative.
+ 	if(parm10 < 0) {
+ 		self.lastteam = -50;
+		TeamCheckLock();
+		self.lastteam = self.lastteam + 128; // force a stuff cmd in think
+	}
+
 
 // a client connecting during an intermission can cause problems
 	if (intermission_running)
@@ -1194,8 +1458,42 @@ void() ClientDisconnect =
 	bprint (ftos(self.frags));
 	bprint (" frags\n");
 	sound (self, CHAN_BODY, "player/tornoff2.wav", 1, ATTN_NONE);
+	DropRune();
+	TeamCaptureDropFlag();
 	set_suicide_frame ();
 };
+
+void(entity targ, entity attacker, string what) LogPlayerDMDeath =
+{
+	dprint("death ");
+	dprint(targ.netname);
+	dprint(" by ");
+	dprint(attacker.netname);
+	dprint(" ");
+	dprint(what);
+	dprint(" ");
+	dprint(ftos(targ.frags));
+	dprint(" ");
+	dprint(ftos(attacker.frags));
+	dprint("\n");
+};
+
+void (entity targ, string what) LogPlayerDeath =
+{
+	dprint("death ");
+	dprint(targ.netname);
+	dprint(" ");
+	dprint(what);
+	dprint(" ");
+	dprint(ftos(targ.frags));
+	dprint("\n");
+};
+
+// *TEAMPLAY*
+// Prototypes
+
+float(entity targ, entity attacker) TeamFragPenalty;
+void(entity targ, entity attacker) TeamDeathPenalty;
 
 /*
 ===========
@@ -1207,7 +1505,7 @@ called when a player dies
 void(entity targ, entity attacker) ClientObituary =
 {
 	local	float rnum;
-	local	string deathstring, deathstring2;
+	local	string deathstring, deathstring2, what, s;
 	rnum = random();
 
 	if (targ.classname == "player")
@@ -1220,6 +1518,7 @@ void(entity targ, entity attacker) ClientObituary =
 			bprint ("\n");
 
 			attacker.owner.frags = attacker.owner.frags + 1;
+			LogPlayerDMDeath(targ, attacker.owner, "telefrag");
 			return;
 		}
 
@@ -1230,6 +1529,7 @@ void(entity targ, entity attacker) ClientObituary =
 			bprint ("'s telefrag\n");
 
 			targ.frags = targ.frags - 1;
+			LogPlayerDeath(targ, "telefrag");
 			return;
 		}
 
@@ -1244,12 +1544,20 @@ void(entity targ, entity attacker) ClientObituary =
 				if (targ.weapon == 64 && targ.waterlevel > 1)
 				{
 					bprint (" discharges into the water.\n");
+					LogPlayerDeath(targ, "discharge");
 					return;
 				}
-				if (targ.weapon == IT_GRENADE_LAUNCHER)
+				if (targ.weapon == IT_GRENADE_LAUNCHER) {
 					bprint (" tries to put the pin back in\n");
-				else
+					LogPlayerDeath(targ, "grenade");
+				} else if (targ.team != targ.lastteam) {
+					//ZOID: try if player was gibbed for changing teams
+					bprint (" changed teams\n");
+					LogPlayerDeath(targ, "teamchange");
+				} else {
 					bprint (" becomes bored with life\n");
+					LogPlayerDeath(targ, "rocket");
+				}
 				return;
 			}
 			else if ( (teamplay == 2) && (targ.team > 0)&&(targ.team == attacker.team) )
@@ -1269,33 +1577,66 @@ void(entity targ, entity attacker) ClientObituary =
 			}
 			else
 			{
-				attacker.frags = attacker.frags + 1;
+// *TEAMPLAY*
+// TeamFragPenalty returns true if the attacker gets a frag penalty for
+// killing this target.  It also deducts frags as needed.
+				if (!TeamFragPenalty(targ, attacker))
+					//ZOID: If in capture mode, do we count regular frags?
+					if ((targ.player_flag & ITEM_ENEMY_FLAG) &&
+						targ.team != attacker.team) {
+						//ZOID: fragged enemy flag carrier
+						attacker.frags = attacker.frags +
+							TEAM_CAPTURE_FRAG_CARRIER_BONUS;
+						sprint(attacker, "Enemy carrier killed: ");
+						s = ftos(TEAM_CAPTURE_FRAG_CARRIER_BONUS);
+						sprint(attacker, s);
+						sprint(attacker, " point bonus\n");
+					} else
+						attacker.frags = attacker.frags + 1;
+
+// *TEAMPLAY*
+// TeamDeathPenalty kills the attacker if necessary and adjusts frags to
+// offset the one frag penalty for dying.
+				TeamDeathPenalty(targ, attacker);
 
 				rnum = attacker.weapon;
 				if (rnum == IT_AXE)
 				{
 					deathstring = " was ax-murdered by ";
 					deathstring2 = "\n";
+					what = "axe";
+				}
+				if (rnum == IT_HOOK) {
+					if (random() < 0.5)
+						deathstring = " was disembowled by ";
+					else
+						deathstring = " was hooked by ";
+					deathstring2 = "\n";
+					what = "hook";
 				}
 				if (rnum == IT_SHOTGUN)
 				{
 					deathstring = " chewed on ";
 					deathstring2 = "'s boomstick\n";
+					what = "shotgun";
 				}
 				if (rnum == IT_SUPER_SHOTGUN)
 				{
 					deathstring = " ate 2 loads of ";
 					deathstring2 = "'s buckshot\n";
+					what = "supershotgun";
 				}
 				if (rnum == IT_NAILGUN)
 				{
 					deathstring = " was nailed by ";
 					deathstring2 = "\n";
+					what = "nailgun";
 				}
 				if (rnum == IT_SUPER_NAILGUN)
 				{
 					deathstring = " was punctured by ";
 					deathstring2 = "\n";
+					what = "supernailgun";
 				}
 				if (rnum == IT_GRENADE_LAUNCHER)
 				{
@@ -1306,6 +1647,13 @@ void(entity targ, entity attacker) ClientObituary =
 						deathstring = " was gibbed by ";
 						deathstring2 = "'s grenade\n";
 					}
+					what = "grenade";
+				}
+				if (rnum == IT_FLAMETHROWER)
+				{
+					deathstring = " is invited to ";
+					deathstring2 = "'s barbeque\n";
+					what = "flamethrower";
 				}
 				if (rnum == IT_ROCKET_LAUNCHER)
 				{
@@ -1316,6 +1664,7 @@ void(entity targ, entity attacker) ClientObituary =
 						deathstring = " was gibbed by ";
 						deathstring2 = "'s rocket\n" ;
 					}
+					what = "rocket";
 				}
 				if (rnum == IT_LIGHTNING)
 				{
@@ -1324,11 +1673,13 @@ void(entity targ, entity attacker) ClientObituary =
 						deathstring2 = "'s discharge\n";
 					else
 						deathstring2 = "'s shaft\n";
+					what = "lightning";
 				}
 				bprint (targ.netname);
 				bprint (deathstring);
 				bprint (attacker.netname);
 				bprint (deathstring2);
+				LogPlayerDMDeath(targ, attacker, what);
 			}
 			return;
 		}
@@ -1340,38 +1691,55 @@ void(entity targ, entity attacker) ClientObituary =
 			// killed by a montser?
 			if (attacker.flags & FL_MONSTER)
 			{
-				if (attacker.classname == "monster_army")
+				if (attacker.classname == "monster_army") {
 					bprint (" was shot by a Grunt\n");
-				if (attacker.classname == "monster_demon1")
+					LogPlayerDeath(targ, "grunt");
+				} else if (attacker.classname == "monster_demon1") {
 					bprint (" was eviscerated by a Fiend\n");
-				if (attacker.classname == "monster_dog")
+					LogPlayerDeath(targ, "fiend");
+				} else if (attacker.classname == "monster_dog") {
 					bprint (" was mauled by a Rottweiler\n");
-				if (attacker.classname == "monster_dragon")
+					LogPlayerDeath(targ, "dog");
+				} else if (attacker.classname == "monster_dragon") {
 					bprint (" was fried by a Dragon\n");
-				if (attacker.classname == "monster_enforcer")
+					LogPlayerDeath(targ, "dragon");
+				} else if (attacker.classname == "monster_enforcer") {
 					bprint (" was blasted by an Enforcer\n");
-				if (attacker.classname == "monster_fish")
+					LogPlayerDeath(targ, "enforcer");
+				} else if (attacker.classname == "monster_fish") {
 					bprint (" was fed to the Rotfish\n");
-				if (attacker.classname == "monster_hell_knight")
+					LogPlayerDeath(targ, "fish");
+				} else if (attacker.classname == "monster_hell_knight") {
 					bprint (" was slain by a Death Knight\n");
-				if (attacker.classname == "monster_knight")
+					LogPlayerDeath(targ, "deathknight");
+				} else if (attacker.classname == "monster_knight") {
 					bprint (" was slashed by a Knight\n");
-				if (attacker.classname == "monster_ogre")
+					LogPlayerDeath(targ, "knight");
+				} else if (attacker.classname == "monster_ogre") {
 					bprint (" was destroyed by an Ogre\n");
-				if (attacker.classname == "monster_oldone")
+					LogPlayerDeath(targ, "ogre");
+				} else if (attacker.classname == "monster_oldone") {
 					bprint (" became one with Shub-Niggurath\n");
-				if (attacker.classname == "monster_shalrath")
+					LogPlayerDeath(targ, "shub");
+				} else if (attacker.classname == "monster_shalrath") {
 					bprint (" was exploded by a Vore\n");
-				if (attacker.classname == "monster_shambler")
+					LogPlayerDeath(targ, "vore");
+				} else if (attacker.classname == "monster_shambler") {
 					bprint (" was smashed by a Shambler\n");
-				if (attacker.classname == "monster_tarbaby")
+					LogPlayerDeath(targ, "shambler");
+				} else if (attacker.classname == "monster_tarbaby") {
 					bprint (" was slimed by a Spawn\n");
-				if (attacker.classname == "monster_vomit")
+					LogPlayerDeath(targ, "spawn");
+				} else if (attacker.classname == "monster_vomit") {
 					bprint (" was vomited on by a Vomitus\n");
-				if (attacker.classname == "monster_wizard")
+					LogPlayerDeath(targ, "vomitus");
+				} else if (attacker.classname == "monster_wizard") {
 					bprint (" was scragged by a Scrag\n");
-				if (attacker.classname == "monster_zombie")
+					LogPlayerDeath(targ, "scrag");
+				} else if (attacker.classname == "monster_zombie") {
 					bprint (" joins the Zombies\n");
+					LogPlayerDeath(targ, "zombie");
+				}
 
 				return;
 			}
@@ -1380,26 +1748,31 @@ void(entity targ, entity attacker) ClientObituary =
 			if (attacker.classname == "explo_box")
 			{
 				bprint (" blew up\n");
+				LogPlayerDeath(targ, "explosion");
 				return;
 			}
 			if (attacker.solid == SOLID_BSP && attacker != world)
 			{
 				bprint (" was squished\n");
+				LogPlayerDeath(targ, "squished");
 				return;
 			}
 			if (attacker.classname == "trap_shooter" || attacker.classname == "trap_spikeshooter")
 			{
 				bprint (" was spiked\n");
+				LogPlayerDeath(targ, "spiked");
 				return;
 			}
 			if (attacker.classname == "fireball")
 			{
 				bprint (" ate a lavaball\n");
+				LogPlayerDeath(targ, "fireball");
 				return;
 			}
 			if (attacker.classname == "trigger_changelevel")
 			{
 				bprint (" tried to leave\n");
+				LogPlayerDeath(targ, "noexit");
 				return;
 			}
 
@@ -1411,6 +1784,7 @@ void(entity targ, entity attacker) ClientObituary =
 					bprint (" sleeps with the fishes\n");
 				else
 					bprint (" sucks it down\n");
+				LogPlayerDeath(targ, "drowned");
 				return;
 			}
 			else if (rnum == -4)
@@ -1419,6 +1793,7 @@ void(entity targ, entity attacker) ClientObituary =
 					bprint (" gulped a load of slime\n");
 				else
 					bprint (" can't exist on slime alone\n");
+				LogPlayerDeath(targ, "slimed");
 				return;
 			}
 			else if (rnum == -5)
@@ -1426,12 +1801,14 @@ void(entity targ, entity attacker) ClientObituary =
 				if (targ.health < -15)
 				{
 					bprint (" burst into flames\n");
+					LogPlayerDeath(targ, "melted");
 					return;
 				}
 				if (random() < 0.5)
 					bprint (" turned into hot slag\n");
 				else
 					bprint (" visits the Volcano God\n");
+				LogPlayerDeath(targ, "melted");
 				return;
 			}
 
@@ -1440,10 +1817,12 @@ void(entity targ, entity attacker) ClientObituary =
 			{
 				targ.deathtype = "";
 				bprint (" fell to his death\n");
+				LogPlayerDeath(targ, "falling");
 				return;
 			}
 
 			// hell if I know; he's just dead!!!
+			LogPlayerDeath(targ, "died");
 			bprint (" died\n");
 		}
 	}

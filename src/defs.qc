@@ -290,7 +290,7 @@ float	IT_SUPER_NAILGUN		= 8;
 float	IT_GRENADE_LAUNCHER		= 16;
 float	IT_ROCKET_LAUNCHER		= 32;
 float	IT_LIGHTNING			= 64;
-float	IT_EXTRA_WEAPON			= 128;
+float   IT_FLAMETHROWER                 = 128;
 
 float	IT_SHELLS				= 256;
 float	IT_NAILS				= 512;
@@ -309,6 +309,7 @@ float	IT_INVISIBILITY			= 524288;
 float	IT_INVULNERABILITY		= 1048576;
 float	IT_SUIT					= 2097152;
 float	IT_QUAD					= 4194304;
+float	IT_HOOK					= 8388608;
 
 // point content values
 
@@ -409,6 +410,11 @@ float	framecount;
 
 float		skill;
 
+entity	runespawn;
+float	runespawned;
+float	capturespawned;
+float	teamscored;		// non-zero if teams scored
+
 //================================================
 
 //
@@ -457,10 +463,16 @@ float	AS_MISSILE		= 4;
 //
 // player only fields
 //
+
+// *TEAMPLAY*
+
+.float          lastteam;       // The last team this player was a member of.
+
 .float		walkframe;
 
 .float 		attack_finished;
 .float		pain_finished;
+.float		hook_out;
 
 .float		invincible_finished;
 .float		invisible_finished;
@@ -470,6 +482,8 @@ float	AS_MISSILE		= 4;
 .float		invincible_time, invincible_sound;
 .float		invisible_time, invisible_sound;
 .float		super_time, super_sound;
+.float		regeneration_sound;//RUNE: Elder Magic
+.float		haste_sound;//RUNE: Hell Magic
 .float		rad_time;
 .float		fly_sound;
 
@@ -483,6 +497,26 @@ float	AS_MISSILE		= 4;
 .float		air_finished;	// when time > air_finished, start drowning
 .float		bubble_count;	// keeps track of the number of bubbles
 .string		deathtype;		// keeps track of how the player died
+.float 		player_flag;	// misc flags (skins, etc.)
+.float		staydeadtime;	// how long we should stay dead
+.float		regen_time;		// time to next regen
+.float		rune_notice_time;	// last time we notified about multi-runes
+
+// ZOID: Runes
+float		ITEM_RUNE1_FLAG		= 1;
+float		ITEM_RUNE2_FLAG		= 2;
+float		ITEM_RUNE3_FLAG		= 4;
+float		ITEM_RUNE4_FLAG		= 8;
+float		ITEM_RUNE_MASK		= 15;
+
+// ZOID: Capture the flag
+float		ITEM_ENEMY_FLAG		= 16;
+
+.float		motd_time;
+.float		motd_count;
+
+.float		suicide_count;
+.float		killed;			// have we been killed yet
 
 //
 // object stuff
@@ -599,7 +633,7 @@ void() traceoff						= #30;
 void(entity e) eprint				= #31;		// prints an entire edict
 float(float yaw, float dist) walkmove	= #32;	// returns TRUE or FALSE
 // #33 was removed
-float() droptofloor= #34;	// TRUE if landed on floor
+float(float yaw, float dist) droptofloor= #34;	// TRUE if landed on floor
 void(float style, string value) lightstyle = #35;
 float(float v) rint					= #36;		// round to nearest int
 float(float v) floor				= #37;		// largest integer <= v
@@ -690,4 +724,9 @@ float (entity e, float healamount, float ignore) T_Heal; // health function
 
 float(entity targ, entity inflictor) CanDamage;
 
+
+// Flamethrower
+
+.float  onfire;//Flag... set if the entity is on fire
+.entity  firewood;// Pointer to an entity that the flame will burn.
 

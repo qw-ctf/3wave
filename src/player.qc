@@ -1,5 +1,8 @@
 
 void() bubble_bob;
+void() W_FireChain;
+void() player_chain5;
+void() player_chain4;
 
 /*
 ==============================================================================
@@ -98,7 +101,7 @@ void()	player_stand1 =[	$axstnd1,	player_stand1	]
 		return;
 	}
 
-	if (self.weapon == IT_AXE)
+	if (self.weapon == IT_AXE || self.weapon == IT_HOOK)
 	{
 		if (self.walkframe >= 12)
 			self.walkframe = 0;
@@ -123,7 +126,7 @@ void()	player_run =[	$rockrun1,	player_run	]
 		return;
 	}
 
-	if (self.weapon == IT_AXE)
+	if (self.weapon == IT_AXE || self.weapon == IT_HOOK)
 	{
 		if (self.walkframe == 6)
 			self.walkframe = 0;
@@ -166,6 +169,41 @@ void()	player_axed1 =	[$axattd1, player_axed2	] {self.weaponframe=5;};
 void()	player_axed2 =	[$axattd2, player_axed3	] {self.weaponframe=6;};
 void()	player_axed3 =	[$axattd3, player_axed4	] {self.weaponframe=7;W_FireAxe();};
 void()	player_axed4 =	[$axattd4, player_run	] {self.weaponframe=8;};
+
+void()  player_chain1=  [$axattd1, player_chain2 ] {self.weaponframe=2;};
+void()  player_chain2=  [$axattd2, player_chain3 ] {self.weaponframe=3;W_FireChain();};
+
+void()  player_chain3=  [$axattd3, player_chain3 ]
+{
+        self.weaponframe=3;
+        if (!self.hook_out)
+        {
+                player_chain5();
+                return;
+        }
+        if (vlen(self.velocity) >= 750)
+        {
+                player_chain4();
+                return;
+        }
+};
+
+void() player_chain4=  [$deathc4, player_chain4 ]
+{
+        self.weaponframe=4;
+        if (!self.hook_out)
+        {
+                player_chain5();
+                return;
+        }
+        if (vlen(self.velocity) < 750)
+        {
+                player_chain3();
+                return;
+        }
+};
+
+void()  player_chain5=  [$axattd4, player_run    ] {self.weaponframe=5;};
 
 
 //============================================================================
@@ -266,8 +304,6 @@ local float		rs;
 	if (self.watertype == CONTENT_SLIME)
 	{
 // FIX ME	put in some steam here
-		if (self.waterlevel == 3)
-			DeathBubbles(1);
 		if (random() > 0.5)
 			sound (self, CHAN_VOICE, "player/lburn1.wav", 1, ATTN_NORM);
 		else
@@ -344,7 +380,7 @@ void() player_pain =
 	if (self.invisible_finished > time)
 		return;		// eyes don't have pain frames
 
-	if (self.weapon == IT_AXE)
+	if (self.weapon == IT_AXE || self.weapon == IT_HOOK)
 		player_axpain1 ();
 	else
 		player_pain1 ();
@@ -360,12 +396,8 @@ void() player_die_ax1;
 void() DeathBubblesSpawn =
 {
 local entity	bubble;
-//	if (self.owner.waterlevel != 3)
-	if ((self.owner.waterlevel != 3) && (self.owner.health > 0))
-		{
-			remove(self);	// remove bubble spawner
-			return;
-		}
+	if (self.owner.waterlevel != 3)
+		return;
 	bubble = spawn();
 	setmodel (bubble, "progs/s_bubble.spr");
 	setorigin (bubble, self.owner.origin + '0 0 24');
@@ -378,8 +410,7 @@ local entity	bubble;
 	bubble.frame = 0;
 	bubble.cnt = 0;
 	setsize (bubble, '-8 -8 -8', '8 8 8');
-//	self.nextthink = time + 0.1;
-	self.nextthink = time + 0.01;
+	self.nextthink = time + 0.1;
 	self.think = DeathBubblesSpawn;
 	self.air_finished = self.air_finished + 1;
 	if (self.air_finished >= self.bubble_count)
@@ -394,13 +425,12 @@ local entity	bubble_spawner;
 	setorigin (bubble_spawner, self.origin);
 	bubble_spawner.movetype = MOVETYPE_NONE;
 	bubble_spawner.solid = SOLID_NOT;
-//	bubble_spawner.nextthink = time + 0.1;
-	bubble_spawner.nextthink = time + 0.01;
+	bubble_spawner.nextthink = time + 0.1;
 	bubble_spawner.think = DeathBubblesSpawn;
 	bubble_spawner.air_finished = 0;
 	bubble_spawner.owner = self;
 	bubble_spawner.bubble_count = num_bubbles;
-//	return;
+	return;
 };
 
 
@@ -513,12 +543,14 @@ void() GibPlayer =
 
 	if (damage_attacker.classname == "teledeath")
 	{
+		self.staydeadtime = time + 2 + (random() * 3);
 		sound (self, CHAN_VOICE, "player/teledth1.wav", 1, ATTN_NONE);
 		return;
 	}
 
 	if (damage_attacker.classname == "teledeath2")
 	{
+		self.staydeadtime = time + 3 + (random() * 6);
 		sound (self, CHAN_VOICE, "player/teledth1.wav", 1, ATTN_NONE);
 		return;
 	}
@@ -533,19 +565,23 @@ void() PlayerDie =
 {
 	local	float	i;
 
-//	self.items = self.items - (self.items & IT_INVISIBILITY);
-	self.items = self.items - (self.items &
-	(IT_INVISIBILITY | IT_INVULNERABILITY | IT_SUIT | IT_QUAD) );
+	self.items = self.items - (self.items & IT_INVISIBILITY);
 	self.invisible_finished = 0;	// don't die as eyes
 	self.invincible_finished = 0;
 	self.super_damage_finished = 0;
 	self.radsuit_finished = 0;
-	self.effects = 0;	// 1998-07-23 Glowing corpse of players which had quad/pentagram until respawn fix by Maddes
 	self.modelindex = modelindex_player;	// don't use eyes
 
-	if (deathmatch || coop)
+	if (deathmatch || coop) {
 		DropBackpack();
+		DropRune();
+		TeamCaptureDropFlag();
+	}
 
+	if (self.killed == 2)
+		self.killed = 0;
+	else
+		self.killed = 1;
 	self.weaponmodel="";
 	self.view_ofs = '0 0 -8';
 	self.deadflag = DEAD_DYING;
@@ -566,7 +602,7 @@ void() PlayerDie =
 	self.angles_x = 0;
 	self.angles_z = 0;
 
-	if (self.weapon == IT_AXE)
+	if (self.weapon == IT_AXE || self.weapon == IT_HOOK)
 	{
 		player_die_ax1 ();
 		return;

@@ -65,6 +65,7 @@ void(entity targ, entity attacker) Killed =
 
 	if (self.movetype == MOVETYPE_PUSH || self.movetype == MOVETYPE_NONE)
 	{	// doors, triggers, etc
+
 		self.th_die ();
 		self = oself;
 		return;
@@ -91,6 +92,12 @@ void(entity targ, entity attacker) Killed =
 };
 
 
+// *TEAMPLAY*
+// Prototypes
+
+float(entity targ, entity inflictor, entity attacker, float damage) TeamArmorDam;
+float(entity targ, entity inflictor, entity attacker, float damage) TeamHealthDam;
+
 /*
 ============
 T_Damage
@@ -115,10 +122,29 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 // check for quad damage powerup on the attacker
 	if (attacker.super_damage_finished > time)
 		damage = damage * 4;
+// RUNE: check for double damage for rune of Black Magic powerup
+	if (attacker.player_flag & ITEM_RUNE2_FLAG)
+		damage = damage * 2;
+// check if target has rune of Earth Magic (half damage)
+	if (targ.player_flag & ITEM_RUNE1_FLAG) {
+		damage = damage / 2;
+		if (targ.invincible_sound < time) {
+			sound (targ, CHAN_ITEM, "items/protect3.wav", 1, ATTN_NORM);
+			targ.invincible_sound = time + 2;
+		}
+	}
+// RUNE
 
 // save damage based on the target's armor level
 
+// *TEAMPLAY*
+// TeamArmorDam returns true iff the attacker can damage the target's armor
+
+        if (TeamArmorDam(targ, inflictor, attacker, damage))
 	save = ceil(targ.armortype*damage);
+        else
+                save = 0;
+
 	if (save >= targ.armorvalue)
 	{
 		save = targ.armorvalue;
@@ -161,12 +187,15 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 	}
 
 // team play damage avoidance
-//	if ( (teamplay == 1) && (targ.team > 0)&&(targ.team == attacker.team) )
-	if ( (teamplay == 1) && (targ.team > 0) && (targ.team == attacker.team)
-	&& (targ != attacker)
-	&& (attacker.classname == "player")
-	&& (inflictor.classname != "door") )	// because squishing a teammate is still possible
+	if ( (teamplay == 1) && (targ.team > 0)&&(targ.team == attacker.team) )
 		return;
+
+// *TEAMPLAY*
+// TeamHealthDam will return true if the attacker can damage the target's
+// health
+
+        if (!TeamHealthDam(targ, inflictor, attacker, damage))
+                return;
 
 // do the damage
 	targ.health = targ.health - take;

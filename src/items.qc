@@ -168,10 +168,13 @@ void() health_touch =
 			return;
 	}
 
-	sprint(other, "You receive ");
-	s = ftos(self.healamount);
-	sprint(other, s);
-	sprint(other, " health\n");
+// ZOID--remove uncessary msgs
+	if (!deathmatch) {
+		sprint(other, "You receive ");
+		s = ftos(self.healamount);
+		sprint(other, s);
+		sprint(other, " health\n");
+	}
 
 // health touch sound
 	sound(other, CHAN_ITEM, self.noise, 1, ATTN_NORM);
@@ -207,8 +210,9 @@ void() item_megahealth_rot =
 {
 	other = self.owner;
 
-	if (other.health > other.max_health)
-	{
+//ZOID: player doesn't rot if they have Elder Magic rune
+	if (other.health > other.max_health &&
+		!(other.player_flag & ITEM_RUNE4_FLAG)) {
 		other.health = other.health - 1;
 		self.nextthink = time + 1;
 		return;
@@ -275,7 +279,9 @@ void() armor_touch =
 		self.nextthink = time + 20;
 	self.think = SUB_regen;
 
-	sprint(other, "You got armor\n");
+//ZOID--remove unneccessary msgs
+	if (!deathmatch)
+		sprint(other, "You got armor\n");
 // armor touch sound
 	sound(other, CHAN_ITEM, "items/armor1.wav", 1, ATTN_NORM);
 	stuffcmd (other, "bf\n");
@@ -376,6 +382,8 @@ void(float old, float new) Deathmatch_Weapon =
 	local float or, nr;
 
 // change self.weapon if desired
+	if (self.weapon == IT_HOOK && self.button0)
+		return; // never change if we pulled ourselves to it.
 	or = RankForWeapon (self.weapon);
 	nr = RankForWeapon (new);
 	if ( nr < or )
@@ -415,7 +423,9 @@ void() weapon_touch =
 			return;
 		hadammo = other.ammo_nails;
 		new = IT_NAILGUN;
-		other.ammo_nails = other.ammo_nails + 30;
+// *TEAMPLAY*
+		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) )
+			other.ammo_nails = other.ammo_nails + 30;
 	}
 	else if (self.classname == "weapon_supernailgun")
 	{
@@ -423,7 +433,9 @@ void() weapon_touch =
 			return;
 		hadammo = other.ammo_rockets;
 		new = IT_SUPER_NAILGUN;
-		other.ammo_nails = other.ammo_nails + 30;
+// *TEAMPLAY*
+		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) )
+			other.ammo_nails = other.ammo_nails + 30;
 	}
 	else if (self.classname == "weapon_supershotgun")
 	{
@@ -431,7 +443,9 @@ void() weapon_touch =
 			return;
 		hadammo = other.ammo_rockets;
 		new = IT_SUPER_SHOTGUN;
-		other.ammo_shells = other.ammo_shells + 5;
+// *TEAMPLAY*
+		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) )
+			other.ammo_shells = other.ammo_shells + 5;
 	}
 	else if (self.classname == "weapon_rocketlauncher")
 	{
@@ -439,15 +453,21 @@ void() weapon_touch =
 			return;
 		hadammo = other.ammo_rockets;
 		new = IT_ROCKET_LAUNCHER;
-		other.ammo_rockets = other.ammo_rockets + 5;
+// *TEAMPLAY*
+		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) )
+			other.ammo_rockets = other.ammo_rockets + 5;
 	}
 	else if (self.classname == "weapon_grenadelauncher")
 	{
 		if (leave && (other.items & IT_GRENADE_LAUNCHER) )
 			return;
 		hadammo = other.ammo_rockets;
+// FLAMETHROWER
+		other.items = other.items | IT_FLAMETHROWER;
 		new = IT_GRENADE_LAUNCHER;
-		other.ammo_rockets = other.ammo_rockets + 5;
+// *TEAMPLAY*
+		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) )
+			other.ammo_rockets = other.ammo_rockets + 5;
 	}
 	else if (self.classname == "weapon_lightning")
 	{
@@ -455,14 +475,20 @@ void() weapon_touch =
 			return;
 		hadammo = other.ammo_rockets;
 		new = IT_LIGHTNING;
-		other.ammo_cells = other.ammo_cells + 15;
+// *TEAMPLAY*
+		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) )
+			other.ammo_cells = other.ammo_cells + 15;
 	}
 	else
 		objerror ("weapon_touch: unknown classname");
 
-	sprint (other, "You got the ");
-	sprint (other, self.netname);
-	sprint (other, "\n");
+//ZOID--remove unnessary msgs
+	if (!deathmatch) {
+		sprint (other, "You got the ");
+		sprint (other, self.netname);
+		sprint (other, "\n");
+	}
+
 // weapon touch sound
 	sound (other, CHAN_ITEM, "weapons/pkup.wav", 1, ATTN_NORM);
 	stuffcmd (other, "bf\n");
@@ -645,9 +671,12 @@ local float		best;
 
 	bound_other_ammo ();
 
-	sprint (other, "You got the ");
-	sprint (other, self.netname);
-	sprint (other, "\n");
+//ZOID--remove unnessary msgs
+	if (!deathmatch) {
+		sprint (other, "You got the ");
+		sprint (other, self.netname);
+		sprint (other, "\n");
+	}
 // ammo touch sound
 	sound (other, CHAN_ITEM, "weapons/lock4.wav", 1, ATTN_NORM);
 	stuffcmd (other, "bf\n");
@@ -1237,6 +1266,9 @@ void() BackpackTouch =
 		return;
 	if (other.health <= 0)
 		return;
+	//don't let self pick it up for a sec
+	if ((other == self.owner) && ( (self.nextthink - time) > 118 ) )
+		return;
 
 	acount = 0;
 	sprint (other, "You get ");
@@ -1339,9 +1371,22 @@ void() DropBackpack =
 	item = spawn();
 	item.origin = self.origin - '0 0 24';
 
-	item.items = self.weapon;
-	if (item.items == IT_AXE)
-		item.netname = "Axe";
+	// if weapon is flamethrower, change quickly to grenade launcher
+	if (self.weapon == IT_FLAMETHROWER)
+		self.weapon = IT_GRENADE_LAUNCHER;
+
+	item.items = 0; // none by default
+
+//ZOID--axe and hook don't go into backpack
+	if (self.weapon != IT_HOOK || self.weapon != IT_AXE)
+		item.items = self.weapon;
+
+	// If weapon was grenade launcher, flamethrower goes in backpack too
+	if (self.weapon == IT_GRENADE_LAUNCHER)
+		item.items = item.items | IT_FLAMETHROWER;
+
+//	if (item.items == IT_AXE)
+//		item.netname = "Axe";
 	else if (item.items == IT_SHOTGUN)
 		item.netname = "Shotgun";
 	else if (item.items == IT_SUPER_SHOTGUN)
@@ -1378,3 +1423,237 @@ void() DropBackpack =
 	item.nextthink = time + 120;	// remove after 2 minutes
 	item.think = SUB_Remove;
 };
+
+/*----------------------------------------------------------------------
+  The Rune Game modes
+
+  Rune 1 - Earth Magic
+	  resistance
+  Rune 2 - Black Magic
+	  strength
+  Rune 3 - Hell Magic
+	  haste
+  Rune 4 - Elder Magic
+	  regeneration
+
+ ----------------------------------------------------------------------*/
+
+entity() SelectRuneSpawnPoint =
+{
+	runespawn = find(runespawn, classname, "info_player_deathmatch");
+	if (runespawn == world)
+		runespawn = find (runespawn, classname, "info_player_deathmatch");
+	if (runespawn == world)
+		error("no info_player_deathmatch to spawn rune");
+	return runespawn;
+};
+
+void() RuneTouch =
+{
+	local string	s;
+	local	float	best;
+	local		entity	stemp;
+
+	if (other.classname != "player")
+		return;
+	if (other.health <= 0)
+		return;
+	if (other.player_flag & ITEM_RUNE_MASK) {
+		if (other.rune_notice_time < time) {
+			centerprint(other, "You already have a rune.\n");
+			other.rune_notice_time = time + 5;
+		}
+		return; // one per customer
+	}
+
+	other.player_flag = other.player_flag | self.player_flag;
+
+	// notification of rune, no nofity in team mode
+	if (self.player_flag & ITEM_RUNE1_FLAG) {
+		bprint(other.netname);
+//		bprint(" got the rune of Earth Magic!\n");
+		bprint(" got the rune of Åבעפט Íבחיד!\n");
+//		centerprint(other, "You got the Earth Magic Rune!\n\nRESISTANCE\n\nYou now take half damage!");
+		centerprint(other, "You got the Åבעפט Íבחיד Rune!\n\nÒוףיףפבמדו\n\nYou now take half damage!");
+	}
+	if (self.player_flag & ITEM_RUNE2_FLAG) {
+		bprint(other.netname);
+//		bprint(" got the rune of Black Magic!\n");
+		bprint(" got the rune of Âלבדכ Íבחיד!\n");
+//		centerprint(other, "You got the Black Magic Rune!\n\nSTRENGTH\n\nYou now dish out double damage!");
+		centerprint(other, "You got the Âלבדכ Íבחיד Rune!\n\nÓפעומחפט\n\nYou now dish out double damage!");
+	}
+	if (self.player_flag & ITEM_RUNE3_FLAG) {
+		bprint(other.netname);
+//		bprint(" got the rune of Hell Magic!\n");
+		bprint(" got the rune of Èולל Íבחיד!\n");
+//		centerprint(other, "You got the Hell Magic Rune!\n\nHASTE\n\nYou now fire twice fast!");
+		centerprint(other, "You got the Èולל Íבחיד Rune!\n\nÈבףפו\n\nYou now fire twice fast!");
+	}
+	if (self.player_flag & ITEM_RUNE4_FLAG) {
+		bprint(other.netname);
+//		bprint(" got the rune of Elder Magic!\n");
+		bprint(" got the rune of Åלהוע Íבחיד!\n");
+//		centerprint(other, "You got the Elder Magic Rune!\n\nREGENERATION\n\nYou now regenerate!");
+		centerprint(other, "You got the Åלהוע Íבחיד Rune!\n\nÒוחומועבפיןמ\n\nYou now regenerate!");
+	}
+
+	// backpack touch sound
+	sound (other, CHAN_ITEM, "weapons/lock4.wav", 1, ATTN_NORM);
+	stuffcmd (other, "bf\n");
+
+	remove(self);
+};
+
+void (float flag) Do_DropRune;
+
+void() RuneRespawn =
+{
+	local entity oself;
+
+	oself = self;
+
+	// choose random starting points
+	self = SelectRuneSpawnPoint();
+	Do_DropRune(oself.player_flag);
+
+	remove(oself);
+};
+
+void (float flag) Do_DropRune =
+{
+	local entity	item;
+
+	item = spawn();
+	item.origin = self.origin - '0 0 24';
+
+	item.player_flag = flag;
+
+	item.velocity_z = 400;
+	item.velocity_x = -500 + (random() * 1000);
+	item.velocity_y = -500 + (random() * 1000);
+
+	item.flags = FL_ITEM;
+	item.solid = SOLID_TRIGGER;
+	item.movetype = MOVETYPE_TOSS;
+	if (flag & ITEM_RUNE1_FLAG)
+		setmodel (item, "progs/end1.mdl");
+	else if (flag & ITEM_RUNE2_FLAG)
+		setmodel (item, "progs/end2.mdl");
+	else if (flag & ITEM_RUNE3_FLAG)
+		setmodel (item, "progs/end3.mdl");
+	else if (flag & ITEM_RUNE4_FLAG)
+		setmodel (item, "progs/end4.mdl");
+	setsize (item, '-16 -16 0', '16 16 56');
+	item.touch = RuneTouch;
+
+	item.nextthink = time + 120; /* if no one touches it in two minutes,
+		respawn it somewhere else, so inaccessible ones will come 'back' */
+	item.think = RuneRespawn;
+};
+
+/*
+===============
+Droprune
+self is player
+===============
+*/
+void() DropRune =
+{
+	if (self.player_flag & ITEM_RUNE1_FLAG)
+		Do_DropRune(ITEM_RUNE1_FLAG);
+	if (self.player_flag & ITEM_RUNE2_FLAG)
+		Do_DropRune(ITEM_RUNE2_FLAG);
+	if (self.player_flag & ITEM_RUNE3_FLAG)
+		Do_DropRune(ITEM_RUNE3_FLAG);
+	if (self.player_flag & ITEM_RUNE4_FLAG)
+		Do_DropRune(ITEM_RUNE4_FLAG);
+	self.player_flag = self.player_flag - (self.player_flag & ITEM_RUNE_MASK);
+};
+
+/*
+================
+SpawnRunes
+spawn all the runes
+self is the entity that was created for us, we remove it
+================
+*/
+void() SpawnRunes =
+{
+	local entity oself;
+	local float i;
+
+	if (runespawned) {
+		remove(self);
+		return;
+	}
+
+	oself = self;
+
+	// choose random starting points
+	i = random() * 10;
+	while (i > 0) {
+		self = SelectRuneSpawnPoint();
+		i = i - 1;
+	}
+
+	self = SelectRuneSpawnPoint();
+	Do_DropRune(ITEM_RUNE1_FLAG);
+	self = SelectRuneSpawnPoint();
+	Do_DropRune(ITEM_RUNE2_FLAG);
+	self = SelectRuneSpawnPoint();
+	Do_DropRune(ITEM_RUNE3_FLAG);
+	self = SelectRuneSpawnPoint();
+	Do_DropRune(ITEM_RUNE4_FLAG);
+
+	runespawned = 1;
+
+	remove(oself);
+};
+
+// ZOID Capture the flag
+void() item_flag_team1 =
+{
+	if (!deathmatch || !(cvar("teamplay") & TEAM_CAPTURE_FLAG)) {
+		remove(self);
+		return;
+	}
+
+	self.team = TEAM_COLOR1 + 1;
+	self.cnt = 1; // it's at home base
+	precache_model ("progs/w_g_key.mdl");
+	setmodel (self, "progs/w_g_key.mdl");
+	self.touch = TeamCaptureFlagTouch;
+	self.items = IT_KEY2;
+	precache_sound ("misc/medkey.wav");
+	precache_sound ("doors/meduse.wav");
+	self.noise = "misc/medkey.wav";
+	setsize(self, '-16 -16 -24', '16 16 32');
+	// make it glow
+	self.effects = self.effects | EF_DIMLIGHT;
+	StartItem();
+};
+
+void() item_flag_team2 =
+{
+	if (!deathmatch || !(cvar("teamplay") & TEAM_CAPTURE_FLAG)) {
+		remove(self);
+		return;
+	}
+
+	self.team = TEAM_COLOR2 + 1;
+	self.cnt = 1; // it's at home base
+	precache_model ("progs/w_s_key.mdl");
+	setmodel (self, "progs/w_s_key.mdl");
+	self.touch = TeamCaptureFlagTouch;
+	self.items = IT_KEY1;
+	precache_sound ("misc/medkey.wav");
+	precache_sound ("doors/meduse.wav");
+	self.noise = "misc/medkey.wav";
+	setsize(self, '-16 -16 -24', '16 16 32');
+	// make it glow
+	self.effects = self.effects | EF_DIMLIGHT;
+	StartItem();
+};
+
+
