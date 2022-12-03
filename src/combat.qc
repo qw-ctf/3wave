@@ -3,8 +3,6 @@ void() T_MissileTouch;
 void() info_player_start;
 void(entity targ, entity attacker) ClientObituary;
 
-void() monster_death_use;
-
 //============================================================================
 
 /*
@@ -85,7 +83,8 @@ void(entity targ, entity attacker) Killed =
 	self.takedamage = DAMAGE_NO;
 	self.touch = SUB_Null;
 
-	monster_death_use();
+//  removed monsters
+//	monster_death_use();
 	self.th_die ();
 
 	self = oself;
@@ -221,29 +220,8 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 	oldself = self;
 	self = targ;
 
-	if ( (self.flags & FL_MONSTER) && attacker != world)
-	{
-	// get mad unless of the same class (except for soldiers)
-		if (self != attacker && attacker != self.enemy)
-		{
-			if ( (self.classname != attacker.classname)
-			|| (self.classname == "monster_army" ) )
-			{
-				if (self.enemy.classname == "player")
-					self.oldenemy = self.enemy;
-				self.enemy = attacker;
-				FoundTarget ();
-			}
-		}
-	}
-
 	if (self.th_pain)
-	{
 		self.th_pain (attacker, take);
-	// nightmare mode monsters don't go into pain frames often
-		if (skill == 3)
-			self.pain_finished = time + 5;
-	}
 
 	self = oldself;
 };

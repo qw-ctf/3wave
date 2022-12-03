@@ -1,7 +1,7 @@
 Title    : Threewave Capture
-Filename : 3wave32.zip
-Version  : 3.20
-Date     : 96-11-21
+Filename : 3wave35.zip
+Version  : 3.50
+Date     : 96-12-27
 Author   : Dave 'Zoid' Kirsch
 Email    : zoid@threewave.com
 Credits  :
@@ -300,6 +300,7 @@ Teamplay (much of this documentation comes from John Spickes Complete
                 The enables the use of new sounds, models, maps and skins for
                 Capture the Flag.  If you enable this, your clients must
                 download the CTF custom pak file and install it.
+		1024    Enable the ability for players to select a team
 
         Obviously, not all these options make sense together.  teamplay 9
         doesn't really make sense, because you couldn't ever kill a
@@ -327,6 +328,9 @@ Teamplay (much of this documentation comes from John Spickes Complete
                 Protect, Capture the Flag, CUSTOM Capture the Flag, Drop Items
         teamplay 931    Color Lock, Health Protect, Armour
                 Protect, Capture the Flag, CUSTOM Capture the Flag, Drop Items
+        teamplay 2019   Static Teams, Color Lock, Health Protect, Armour
+                Protect, Capture the Flag, CUSTOM Capture the Flag,
+				Drop Items, Player can choose teams
 
         [I use teamplay 995 on my server.  You must have team color lock
         for capture the flag.  Anything else is very confusing.
@@ -467,6 +471,32 @@ Redundant Message Removal
    Removed redundant messages such as "You got the shells" or "You got the
    armor."  This was just cluttering up the message stream and isn't needed
    since pickups are already signified by a flash and an audio cue.
+
+What's new in 3.50
+------------------
+
+- All monster code has been ripped out.  This cut the progs.dat size in half.
+  Monsters aren't used in CTF or deathmatch, so I don't see the point of
+  keeping them.
+
+- Players can now choose teams.  You can enable this by adding 1024 to the
+  teamplay variable.  Until the choice is made, the player is in observer mode
+  and can wander around and watch the action.
+  Combined with the remote admin functions, this can allow clan matches to be
+  set up a lot easier.  Get everyone to join, pick teams and play.  For a
+  'timed' start, a person could stay in observer mode, access the remote admin
+  functions and then change the level after everyone has selected teams.
+
+- Default autoexec.cfg lists teamplay as 2019?CTF3.5
+  This is useful in that people with programs such as QSpy can see the
+  version.  A new release of QSpy will decode the teamplay variable as well.
+
+- Remote adminstration much enhanced to include level change ability.
+  Administration functions (impulses) work while you are dead, too.  Just die
+  and do your admin stuff.  Much easier than trying to find a place to hide.
+  Admin impulses also work during observer mode before team selection.
+
+- Various minor bug fixes
 
 What's new in 3.20
 ------------------

@@ -478,6 +478,14 @@ float	AS_MISSILE		= 4;
 
 // *XXX* end
 
+// OBSERVER
+.float observer;
+.float do_observer;
+
+//ADMIN
+.float accesslvl; // current access level
+.float accessparm; // current access parm
+
 .float		walkframe;
 
 .float 		attack_finished;

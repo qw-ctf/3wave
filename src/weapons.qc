@@ -1367,27 +1367,28 @@ void() ImpulseCommands =
 	if (self.accessparm) // admin functions
 		CheckAdminCmd();
 
-	else if ((self.impulse >= 1 && self.impulse <= 8) || self.impulse == 22 ||
+	else if (!self.observer &&
+		((self.impulse >= 1 && self.impulse <= 8) || self.impulse == 22 ||
 		(self.impulse >= 31 && self.impulse <= 40) ||
- 		self.impulse == 50)
+ 		self.impulse == 50))
 		W_ChangeWeapon ();
 
 	else if (self.impulse == 9)
 		CheatCommand ();
 
-	else if (self.impulse == 10)
+	else if (!self.observer && self.impulse == 10)
 		CycleWeaponCommand ();
 
 	else if (self.impulse == 11)
 		ServerflagsCommand ();
 
-	else if (self.impulse == 12)
+	else if (!self.observer && self.impulse == 12)
 		CycleWeaponReverseCommand ();
 
 //McBain: I picked 69 -- seems appropriate!  I hope 69 hasn't been used in
 // other add-ons.  This is my first attempt at Quake C, and I hope I haven't
 // violated any Quake C ettiquette.  :(
-	else if (self.impulse == 69)
+	else if (!self.observer && self.impulse == 69)
 		PreviousWeaponCommand ();
 
 	else if (self.impulse == 99)
@@ -1395,10 +1396,10 @@ void() ImpulseCommands =
 
 // *TEAMPLAY*
 // If we're allowed to drop items, enable impulse 20 and 21
-	else if ((teamplay & TEAM_DROP_ITEMS) && self.impulse == 20)
+	else if (!self.observer && (teamplay & TEAM_DROP_ITEMS) && self.impulse == 20)
 		TossBackpack ();
 
-	else if ((teamplay & TEAM_DROP_ITEMS) && self.impulse == 21)
+	else if (!self.observer && (teamplay & TEAM_DROP_ITEMS) && self.impulse == 21)
 		TossWeapon ();
 
 // *TEAMPLAY*

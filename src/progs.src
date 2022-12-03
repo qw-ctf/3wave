@@ -1,45 +1,22 @@
-progs.dat
+../progs.dat
 
 defs.qc
 log.qc			// Console logging of game actions
 teamplay.qc     // Compile the teamplay file
-admin.qc		// Remote admin functions
 subs.qc
-fight.qc
-ai.qc
 combat.qc
 items.qc
-
+observ.qc
 weapons.qc
-
-//flame.qc 		// flamethrower removed
-
 telefrag.qc		// from server modules
-
 world.qc
 client.qc
 player.qc
-monsters.qc
 doors.qc
 buttons.qc
 triggers.qc
 plats.qc
 misc.qc
-
-ogre.qc
-demon.qc
-shambler.qc
-knight.qc
-soldier.qc
-wizard.qc
-dog.qc
-zombie.qc
-boss.qc
-
-tarbaby.qc		// registered
-hknight.qc		// registered
-fish.qc			// registered
-shalrath.qc		// registered
-enforcer.qc		// registered
-oldone.qc		// registered
 hook.qc
+server.qc
+admin.qc		// Remote admin functions

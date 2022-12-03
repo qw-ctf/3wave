@@ -17,25 +17,25 @@ void() MOTD =
 		self.motd_count = self.motd_count + 1;
 		if (teamplay & TEAM_CAPTURE_FLAG)
 			if (self.team == TEAM_COLOR1 + 1)
-				centerprint(self, "Welcome!\nRunning ThreeWave CTF 3.2\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
+				centerprint(self, "Welcome!\nRunning ThreeWave CTF 3.5\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
 			else
-				centerprint(self, "Welcome!\nRunning Threewave CTF 3.2\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
+				centerprint(self, "Welcome!\nRunning Threewave CTF 3.5\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
 		else if (teamplay)
-			centerprint(self, "Welcome!\nRunning Threewave CTF 3.2\n\nTEAMPLAY IS ACTIVE");
+			centerprint(self, "Welcome!\nRunning Threewave CTF 3.5\n\nTEAMPLAY IS ACTIVE");
 		else
 			centerprint(self, "Welcome!\nRunning ThreeWave Server Mods");
 		return;
-	} else {
-		sprint(self, "Info: http://quake.threewave.com/\n");
-		if (teamplay & TEAM_CAPTURE_FLAG) {
-			if (teamplay & TEAM_CAPTURE_CUSTOM)
-				sprint(self, "You are playing\nCUSTOM цаптуре тхе флаг!\n"); // CAPTURE THE FLAG
-			else
-				sprint(self, "You are playing\nцаптуре тхе флаг!\n"); // CAPTURE THE FLAG
-			sprint(self, "  Version 3.2\n");
-		}
 	}
 	self.motd_time = 0;
+};
+
+void() MOTD_ChooseTeam =
+{
+	if (!(teamplay & TEAM_CAPTURE_FLAG))
+		return;
+
+	self.motd_time = time + 1;
+	centerprint(self, "Welcome!\nRunning ThreeWave CTF 3.5\n\nцаптуре тхе флаг!\n\nPress 1 for ред team\nPress 2 for блуе team\nOr Press Jump for automatic team\n");
 };
 
 // ZOID: with several effects doing the dimlight thing, they just can't
@@ -92,6 +92,10 @@ void() SetChangeParms =
 	if (self.health <= 0)
 	{
 		SetNewParms ();
+// *TEAMPLAY*
+		parm10 = self.lastteam;	// Save the current team of the player
+		parm15 = self.accesslvl; // remote admin state
+		parm16 = self.player_flag;
 		return;
 	}
 
@@ -122,6 +126,7 @@ void() SetChangeParms =
 	}
 // *TEAMPLAY*
 	parm10 = self.lastteam;	// Save the current team of the player
+	parm15 = self.accesslvl; // remote admin state
 	parm16 = self.player_flag;
 };
 
@@ -144,6 +149,7 @@ void() SetNewParms =
 	parm8 = IT_SHOTGUN;
 // *TEAMPLAY*
 	parm10 = -1;	// Reset
+	parm15 = 0; // remote admin
 	parm16 = 0;
 };
 
@@ -153,6 +159,7 @@ void() DecodeLevelParms =
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_RUNE_MASK);
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
 	self.skin = (self.player_flag & 65280)/256;
+	self.accesslvl = parm15;
 
 	if (serverflags)
 	{
@@ -485,6 +492,9 @@ Player entered the suicide command
 */
 void() ClientKill =
 {
+	if (self.observer)
+		return; // can't suicide when observer
+
 	if (self.suicide_count > 3) {
 		sprint(self, "You have suicided too much already.\n");
 		return;
@@ -621,8 +631,6 @@ void() PutClientInServer =
 
 //	spot = SelectSpawnPoint ();
 
-	self.origin = spot.origin + '0 0 1';
-	self.angles = spot.angles;
 	self.fixangle = TRUE;		// turn this way immediately
 
 // oh, this is a hack!
@@ -630,13 +638,13 @@ void() PutClientInServer =
 	modelindex_eyes = self.modelindex;
 
 	setmodel (self, "progs/player.mdl");
-
 	modelindex_player = self.modelindex;
 
 	setsize (self, VEC_HULL_MIN, VEC_HULL_MAX);
-
 	self.view_ofs = '0 0 22';
 
+	self.origin = spot.origin + '0 0 1';
+	self.angles = spot.angles;
 	player_stand1 ();
 
 	if (deathmatch || coop)
@@ -1208,6 +1216,13 @@ void() PlayerPreThink =
 	if (coop && TEAM_STRICT_COOP)
 		return;
 
+	if (self.observer) {
+		if (self.motd_time < time)
+			MOTD_ChooseTeam();
+		TeamCheckLock();
+		return; // no more checks
+	}
+
 	if (self.view_ofs == '0 0 0')
 		return;		// intermission or finale
 
@@ -1246,6 +1261,7 @@ void() PlayerPreThink =
 // teleporters can force a non-moving pause time
 	if (time < self.pausetime)
 		self.velocity = '0 0 0';
+
 
 // RUNE: If player has rune of elder magic (4), regeneration
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
@@ -1438,13 +1454,26 @@ void() PlayerPostThink =
 {
 	local	float	mspeed, aspeed;
 	local	float	r;
+    local   string  num;
 
-        local   string  num;
+	if (self.do_observer) {
+		BecomeObserver(self);
+	} else if (self.observer) {
+		ObserverThink();
+		return;
+	}
 
 	if (self.view_ofs == '0 0 0')
 		return;		// intermission or finale
-	if (self.deadflag)
+
+	if (self.deadflag) {
+		// check admin impulses if dead
+		if (self.impulse) {
+			CheckAdminCmd();
+			self.impulse = 0;
+		}
 		return;
+	}
 
 // do weapon stuff
 
@@ -1500,18 +1529,23 @@ void() ClientConnect =
  	// Set lastteam negative.
  	if(parm10 < 0 && teamplay > 0) {
  		self.lastteam = -50;
-		TeamCheckLock();
-        if(teamplay & TEAM_LOCK_COLORS) // force a stuff cmd in think
-			self.player_flag = self.player_flag | TEAM_STUFF_COLOR;
-		if ((teamplay & TEAM_CAPTURE_CUSTOM) && (teamplay & TEAM_CAPTURE_FLAG)) {
-			if (self.lastteam == TEAM_COLOR1 + 1)
-				self.skin = 1;
-			else
-				self.skin = 3;
-			if (random() < 0.5)
-				self.skin = self.skin + 1; // visor dude
-			self.player_flag = self.player_flag - (self.player_flag & 65280);
-			self.player_flag = self.player_flag | (self.skin * 256);
+		self.team = -1;
+		if (teamplay & TEAM_CAPTURE_SELECT_TEAM)
+			self.do_observer = 1;
+		else {
+			TeamCheckLock();
+			if(teamplay & TEAM_LOCK_COLORS) // force a stuff cmd in think
+				self.player_flag = self.player_flag | TEAM_STUFF_COLOR;
+			if ((teamplay & TEAM_CAPTURE_CUSTOM) && (teamplay & TEAM_CAPTURE_FLAG)) {
+				if (self.lastteam == TEAM_COLOR1 + 1)
+					self.skin = 1;
+				else
+					self.skin = 3;
+				if (random() < 0.5)
+					self.skin = self.skin + 1; // visor dude
+				self.player_flag = self.player_flag - (self.player_flag & 65280);
+				self.player_flag = self.player_flag | (self.skin * 256);
+			}
 		}
 	}
 
@@ -1547,6 +1581,7 @@ void() ClientDisconnect =
 	set_suicide_frame ();
 
 	self.lastteam = -50;
+	self.team = -50;
 
 	LogMsg(self, "DISCONNECT");
 };

@@ -60,6 +60,7 @@ float TEAM_STATIC_TEAMS =       64;     // Don't allow players to switch teams
 float TEAM_DROP_ITEMS = 	128;	// Allow players to drop packs and
 float TEAM_CAPTURE_FLAG =	256;	// Play capture the flag
 float TEAM_CAPTURE_CUSTOM = 512;	// custom models
+float TEAM_CAPTURE_SELECT_TEAM = 1024; // team selection
 
 float TEAM_CAPTURE_CAPTURE_BONUS = 15; // what you get for capture
 float TEAM_CAPTURE_TEAM_BONUS = 10; // what your team gets for capture
@@ -431,17 +432,17 @@ void() TeamCheckTeam =
 	newcolor = TEAM_COLOR1;
 	t = TEAM1;
 
-	if ( (TEAM_COLOR2 >= 0) && (TEAM2 < t) ) {
+	if ( (TEAM_COLOR2 >= 0) && ((TEAM2 < t) || (TEAM2 == t && random() < 0.5))) {
 			newcolor = TEAM_COLOR2;
 			t = TEAM2;
 	}
 
-	if ( (TEAM_COLOR3 >= 0) && (TEAM3 < t) ) {
+	if ( (TEAM_COLOR3 >= 0) && ((TEAM3 < t) || (TEAM2 == t && random() < 0.5))) {
 			newcolor = TEAM_COLOR3;
 			t = TEAM3;
 	}
 
-	if ( (TEAM_COLOR4 >= 0) && (TEAM4 < t) ) {
+	if ( (TEAM_COLOR4 >= 0) && ((TEAM4 < t) || (TEAM2 == t && random() < 0.5))) {
 			newcolor = TEAM_COLOR4;
 			t = TEAM4;
 	}
@@ -502,6 +503,12 @@ void() TeamCheckLock =
         // Don't do anything if teamplay is negative
         if ( teamplay < 0 )
                 return;
+
+		if (self.observer || self.do_observer) {
+			if (self.team != 1)
+				stuffcmd(self, "color 0\n");
+			return;
+		}
 
 		if (self.player_flag & TEAM_STUFF_COLOR) {
 			self.player_flag = self.player_flag - TEAM_STUFF_COLOR;
@@ -958,9 +965,9 @@ void(entity flg) TeamDropFlag =
 	flg.solid = SOLID_TRIGGER;
 	flg.movetype = MOVETYPE_TOSS;
 	if (teamplay & TEAM_CAPTURE_CUSTOM)
-		setsize(self, '-16 -16 0', '16 16 74');
+		setsize(flg, '-16 -16 0', '16 16 74');
 	else
-		setsize(item, '-16 -16 -24', '16 16 32');
+		setsize(flg, '-16 -16 -24', '16 16 32');
 	// return it after so long
 	flg.super_time = time + TEAM_CAPTURE_FLAG_RETURN_TIME;
 };
@@ -1196,7 +1203,7 @@ entity() TeamCaptureSpawn =
 		if (team1_lastspawn == world)
 			team1_lastspawn = find(team1_lastspawn, classname, "info_player_team1");
 		return team1_lastspawn;
-	} else { // if (self.team == TEAM_COLOR2 + 1)
+	} else if (self.team == TEAM_COLOR2 + 1) {
 		team2_lastspawn = find(team2_lastspawn, classname, "info_player_team2");
 		if (team2_lastspawn == world)
 			team2_lastspawn = find(team2_lastspawn, classname, "info_player_team2");
@@ -1265,7 +1272,7 @@ void() TeamFlagStatusReport =
 			sprint(self, " has the enemy flag.\n");
 		}
 	} else {
-		sprint(self, "The enemy is ");
+		sprint(self, "The enemy flag is ");
 		if (flag2 == world)
 			sprint(self, "missing!\n");
 		if (flag2.cnt == FLAG_AT_BASE)
@@ -1417,5 +1424,20 @@ void() TeamCaptureCheckUpdate =
 		bprint(s);
 		bprint(" points!\n");
 	}
+};
+
+/*QUAKED func_ctf_wall (0 .5 .8) ?
+This is just a solid wall if not inhibitted
+Only appears in CTF teamplay
+*/
+void() func_ctf_wall =
+{
+	if (cvar("teamplay") & TEAM_CAPTURE_FLAG) {
+		self.angles = '0 0 0';
+		self.movetype = MOVETYPE_PUSH;	// so it doesn't get pushed by anything
+		self.solid = SOLID_BSP;
+		setmodel (self, self.model);
+	} else
+		remove(self);
 };
 
