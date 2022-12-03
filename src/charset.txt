@@ -9,6 +9,7 @@ Elder Magic     = еЛДЕР мАГИЦ
 Regeneration    = рЕГЕНЕРАТИОН
 BLUE            = блуе
 RED             = ред
+FLAG            = флаг
 YOU GOT THE ENEMY FLAG = ыоу гот тхе енемы флаг
 RETURN TO BASE = ретурн то басе
 CAPTURE THE FLAG = цаптуре тхе флаг

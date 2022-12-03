@@ -36,7 +36,7 @@ entity(entity spot) TelefragSelectSpawnPoint =
 	firstspot = spot;
 
 	while (search_spot) {
-		e = findradius(spot.origin, 100);
+		e = findradius(spot.origin, 50);
 		if (!e)
 			search_spot = 0;
 		else {

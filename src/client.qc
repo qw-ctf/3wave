@@ -27,10 +27,10 @@ void() MOTD =
 		return;
 	} else {
 		sprint(self, "Info: http://quake.threewave.com/\n");
-		if (teamplay)
-			sprint(self, "Impulse 25 for Team Settings\n");
-		if (teamplay & TEAM_CAPTURE_FLAG)
+		if (teamplay & TEAM_CAPTURE_FLAG) {
 			sprint(self, "You are playing цаптуре тхе флаг!\n"); // CAPTURE THE FLAG
+			sprint(self, "  Version 2.5\n");
+		}
 	}
 	self.motd_time = 0;
 };
@@ -42,7 +42,6 @@ void() MOTD =
 // 1. Invincible (Pentagram)
 // 2. Super Damage (Quad Power)
 // 3. Having Flag in Capture
-// 4. On fire (flamethrower)
 // self is player
 void () CheckDimLight = {
 	local float flag;
@@ -56,9 +55,6 @@ void () CheckDimLight = {
 		flag = 1;
 	// flag
 	if (self.player_flag & ITEM_ENEMY_FLAG)
-		flag = 1;
-	// On fire
-	if (self.onfire)
 		flag = 1;
 
 	if (flag)
@@ -140,7 +136,7 @@ void() SetNewParms =
 
 void() DecodeLevelParms =
 {
-	self.player_flag = parm16;
+	self.player_flag = self.player_flag | parm16;
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_RUNE_MASK);
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
 	if (teamplay == 0)
@@ -586,9 +582,6 @@ void() PutClientInServer =
 	self.regen_time = 0;
 	self.rune_notice_time = 0;
 
-	// Flamethrower - just to be sure
-	self.onfire = FALSE;
-
 	DecodeLevelParms ();
 
 	W_SetCurrentAmmo ();
@@ -823,6 +816,11 @@ local float r;
 		if (old == "e2m2") return "e2m3";
 		if (old == "e2m3") return "e2m5";
 		if (old == "e2m5") return "e4m3";
+		if (old == "e4m3") return "e4m4";
+		if (old == "e4m4") return "e4m5";
+		if (old == "e4m5") return "e4m6";
+		if (old == "e4m6") return "dm3";
+		if (old == "dm3") return "dm6";
 		return "e1m1";
 	}
 	if (r > 0.8) {
@@ -1412,9 +1410,7 @@ void() ClientConnect =
 	bprint (self.netname);
 	bprint (" entered the game\n");
 
-	dprint("Client ");
-	dprint(self.netname);
-	dprint(" added\n");
+	LogMsg(self, "CONNECT");
 
 	self.motd_time = time + 3;
 	self.motd_count = 0;
@@ -1425,12 +1421,12 @@ void() ClientConnect =
 // *TEAMPLAY*
  	// If this is our first connection, parm10 is < 0
  	// Set lastteam negative.
- 	if(parm10 < 0) {
+ 	if(parm10 < 0 && teamplay > 0) {
  		self.lastteam = -50;
 		TeamCheckLock();
-		self.lastteam = self.lastteam + 128; // force a stuff cmd in think
+        if(teamplay & TEAM_LOCK_COLORS) // force a stuff cmd in think
+			self.player_flag = self.player_flag | TEAM_STUFF_COLOR;
 	}
-
 
 // a client connecting during an intermission can cause problems
 	if (intermission_running)
@@ -1461,32 +1457,8 @@ void() ClientDisconnect =
 	DropRune();
 	TeamCaptureDropFlag();
 	set_suicide_frame ();
-};
 
-void(entity targ, entity attacker, string what) LogPlayerDMDeath =
-{
-	dprint("death ");
-	dprint(targ.netname);
-	dprint(" by ");
-	dprint(attacker.netname);
-	dprint(" ");
-	dprint(what);
-	dprint(" ");
-	dprint(ftos(targ.frags));
-	dprint(" ");
-	dprint(ftos(attacker.frags));
-	dprint("\n");
-};
-
-void (entity targ, string what) LogPlayerDeath =
-{
-	dprint("death ");
-	dprint(targ.netname);
-	dprint(" ");
-	dprint(what);
-	dprint(" ");
-	dprint(ftos(targ.frags));
-	dprint("\n");
+	LogMsg(self, "DISCONNECT");
 };
 
 // *TEAMPLAY*
@@ -1552,7 +1524,10 @@ void(entity targ, entity attacker) ClientObituary =
 					LogPlayerDeath(targ, "grenade");
 				} else if (targ.team != targ.lastteam) {
 					//ZOID: try if player was gibbed for changing teams
-					bprint (" changed teams\n");
+					if (teamplay & TEAM_STATIC_TEAMS)
+						bprint (" tried to change teams\n");
+					else
+						bprint (" changed teams\n");
 					LogPlayerDeath(targ, "teamchange");
 				} else {
 					bprint (" becomes bored with life\n");
@@ -1648,12 +1623,6 @@ void(entity targ, entity attacker) ClientObituary =
 						deathstring2 = "'s grenade\n";
 					}
 					what = "grenade";
-				}
-				if (rnum == IT_FLAMETHROWER)
-				{
-					deathstring = " is invited to ";
-					deathstring2 = "'s barbeque\n";
-					what = "flamethrower";
 				}
 				if (rnum == IT_ROCKET_LAUNCHER)
 				{

@@ -352,7 +352,7 @@ local entity	death;
 	setsize (death, death_owner.mins - '1 1 1', death_owner.maxs + '1 1 1');
 	setorigin (death, org);
 	death.touch = tdeath_touch;
-	death.nextthink = time + 0.2;
+	death.nextthink = time + 0.1;
 	death.think = SUB_Remove;
 	death.owner = death_owner;
 

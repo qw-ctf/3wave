@@ -1,18 +1,24 @@
 Title    : Threewave Capture
-Filename : 3wave23.zip
-Version  : 2.30
-Date     : 96-10-14
+Filename : 3wave251.zip
+Version  : 2.51
+Date     : 96-11-06
 Author   : Dave 'Zoid' Kirsch
-Email    : zoid@mindlink.net
+Email    : zoid@threewave.com
 Credits  : John Spickes aka Guru <jspickes@eng.umd.edu> for JTEAM
            Aegis - moral support and general overexcited Quake guy
            Beowulf - my cat who keeps getting me fragged when he jumps on my
                      keyboard or starts chasing my mouse
            "Mike" <amichael@asu.alasu.edu> for Morning Star (Hook)
            Tom "Bjorn" Klok <tomtom@mindlink.net> for original ideas
-		       such as the runes and capture games, various suggestions
-    		   and bug fixes.  Check his server at quake.mindlink.net,
-    		   204.174.17.22
+               such as the runes and capture games, various suggestions
+               and bug fixes.  Check his server at quake.mindlink.net,
+               204.174.17.22
+           Kevin "Trojan[CampQ]" Hodgson <kevin@caseware.com> for modifing
+               e4m5.
+           Byron "Wonko" Long <byron@caseware.com> for adding Flag Status
+               reports via impulse 23.
+           Michael "McBain" Peckman for the PreviousWeaponCommand (impulse
+			   69)
 
 Type of Mod
 -----------
@@ -27,18 +33,107 @@ context diff  : no
 .qc files     : yes
 progs.dat     : yes
 
-[NOTE: The diff is against v1.06 of id's Quake-C code.  This includes
-John Cash's official fixes.   I've tweaked his stuff a bit though.  :)
-I'm running this with a 1.01 server.  I have to do this because there
-isn't a 1.06 server for Linux yet.  But it works fine with the progs.dat
-from 1.06.  Your mileage may vary.
--Zoid].
+QUICK ADMIN INFO:
 
-[ADMINS:  Remember to edit the hostname in autoexec.cfg!
-I saw several servers out there named "Threewave-Capture".  That's *my*
-server, thank you.  I've changed it so that the default autoexec.cfg
-now contains "hostname PoorlyConfiguredCapture".  So make sure you change
-it or everyone will see your error].
+1.  Remember to edit the hostname in autoexec.cfg!
+	I saw several servers out there named "Threewave-Capture".  That's *my*
+	server, thank you.  I've changed it so that the default autoexec.cfg
+	now contains "hostname PoorlyConfiguredCapture".  So make sure you change
+	it or everyone will see your error.
+2.  Edit the message displayed in client.qc, near the top in the function
+    MOTD.  After editing it, run qcc to compile it again.  Don't have qcc?
+	Go get it from
+	http://www.cdrom.com/pub/quake/idstuff/source/qutils.zip
+
+What's new in 2.51
+------------------
+
+- Oops.  Fixed a bug where the flag dropped by fragging an enemy carrier would
+  fall through the floor has been fixed.  I hate it when that happens.
+
+What's new in 2.50
+------------------
+
+This is the last release before the custom stuff will be the standard.  This
+should hold you over until the custom stuff is finished and ready to go soon.
+I know you are all dying to see the cool flag models, but just hold your
+horses.  It'll be out soon.
+
+- Remote Adminstration
+  There is a new remote adminstration function.  It is enabled by sending
+  three 'secret' impulses in a specific order.  BY DEFAULT ADMIN ACCESS
+  IS DISABLED.  In order to enable it, edit the file admin.qc to enter
+  a password impulse sequence and recompile with qcc.
+  Currently, the admin functions are a simple remote client kick, and the
+  ability to change someone from one team to another.  Please read admin.qc
+  for more details.
+
+- Version number is now printed upon connect
+
+- Flamethrower removed.
+  Main reason was it was mostly useless.
+  I've put a lot of consideration about adding weapon patches to the ThreeWave
+  CTF pack.  My conclusion (with the exception of the hook) is that they don't
+  belong there.   The ThreeWave mods is about teamplay and fun.  It's not
+  about way cool weapon patches.  Server adminstrators are quite welcome to
+  hack in other patches into the code if they wish.
+
+- New maps:  e4m4, e4m5, e4m6, dm3 and dm6.  Server operators by sure to
+  copy over the new bsp files for this maps and run dobsp.bat
+  Oh, e1m8 was modified to be more fair.
+
+- Better logging
+  The server logging is now seperated by tabs.  BE WARNED that the source
+  contains embedded tabs in some strings now (mostly in log.qc); be careful
+  with editors that strip out tabs.  Real men who use vi will not have a
+  problem.  :)
+  The logging can be parsed easy by programs such as perl or awk for statistic
+  generation.  If you want to turn off logging, comment out the bodies of the
+  functions in log.qc and recompile.
+
+- Significant changes to the internal handling of team colors.  Trying to
+  change your team colors will instantly gib you, in both static color and
+  non-static modes.  The reason for this is before they could would just
+  send the server a command to change color and the server would change
+  your color back.  People were constantly sending color commands
+  repeatedly (a macro, causing lag, too) to appear as another color.  In
+  2.3, you will be on the other "team" for a second cause the enemy team
+  to not be able to damage you.  Enough of that crap. Change colors and
+  you get gibbed. Change colors five times and you get kicked from the
+  server.  Goodbye.
+
+- Proper messages for explaining why the losers suddenly gibbed when trying to
+  change team colors.
+
+- Earth Rune
+  This rune was changed so it only protects health.  It no longer causes half
+  damage to armour.  So, the damage goes through your armor at full strength,
+  then the remaining is halved and then your health is removed.  A guy with
+  the Earth Rune, 200% armor and a grenade launcher could literally go berzerk
+  and cause lots of mayhem and not die!
+
+- McBain's Previous Weapon Impulse.  Impulse 69 (seemed appropirate) will
+  toggle between your last two weapons.  Nice for switching to the RL and then
+  switching back.  Makes binding stuff like quick rocket keys very easy since
+  you can just do:
+  		bind q "impulse 7;wait;+attack;wait;-attack;impulse 69"
+
+- Hook velocity lowered to 800 from 1000.
+
+- Various team bonus variables added to teamplay.qc.  If you want to tune the
+  CTF scoring on your server, just edit the TEAM_CAPTURE_..._BONUS variables
+  in teamplay.qc and recompile.
+
+- Capture the Flag Status report from Wonko, Impulse 23.
+  Very handy command Wonko gave to me.  Impulse 23 will tell your the status
+  of the flags: if they are at base, lying about, or who is carrying them.
+
+- Bug in the Impulse 21 for weapon drop where if you have a weapon from a
+  previous level that doesn't exist on the current level (for example, the
+  lightning gun going from a registered to a shareware level) and tried to
+  drop it, the server would crash.
+
+- Impulse 11 server crash bug fix.
 
 What's new in 2.30
 ------------------
@@ -93,12 +188,12 @@ What's new in 2.30
   them in teamplay.qc if you feel necessary.  But they've been through
   a month of testing and are pretty balanced.  The scores are [from
   teamplay.qc]:
-	float TEAM_CAPTURE_CAPTURE_BONUS = 12; // what you get for capture
-	float TEAM_CAPTURE_TEAM_BONUS = 12; // what your team gets for capture
-	float TEAM_CAPTURE_RECOVERY_BONUS = 1; // what you get for recovery
-	float TEAM_CAPTURE_FLAG_BONUS = 1; // what you get for picking up enemy flag
-	float TEAM_CAPTURE_FRAG_CARRIER_BONUS = 3; // what you get for fragging
-		//enemy flag carrier
+    float TEAM_CAPTURE_CAPTURE_BONUS = 12; // what you get for capture
+    float TEAM_CAPTURE_TEAM_BONUS = 12; // what your team gets for capture
+    float TEAM_CAPTURE_RECOVERY_BONUS = 1; // what you get for recovery
+    float TEAM_CAPTURE_FLAG_BONUS = 1; // what you get for picking up enemy flag
+    float TEAM_CAPTURE_FRAG_CARRIER_BONUS = 3; // what you get for fragging
+        //enemy flag carrier
 
 - Self dropped weapons via impulse 21 weren't being removed properly.
 
@@ -140,6 +235,8 @@ What's new in 2.10
   and then everyone's frag value is set to the team total.  This
   way you cleary see which team won.
   Probably a few other fixes here and there.  It's just better, ok?
+
+------------------------------------------------------------------------------
 
 Description of the Modification
 -------------------------------
@@ -223,9 +320,15 @@ Teamplay (much of this documentation comes from John Spickes Complete
         teamplay 120    Static Teams, Color Lock, Frag Penalty, Death Penalty
         teamplay 355    Static Teams, Color Lock, Health Protect, Armour
                 Protect, Capture the Flag
+		teamplay 483    Static Teams, Color Lock, Health Protect, Armour
+				Protect, Capture the Flag, Drop Items
+		teamplay 419    Color Lock, Health Protect, Armour
+				Protect, Capture the Flag, Drop Items
 
-        [I use teamplay 355 on my server.  You must have team color lock
-        for capture the flag.  Anything else is very confusing. -Zoid]
+        [I use teamplay 483 on my server.  You must have team color lock
+        for capture the flag.  Anything else is very confusing.
+		Another common setting is 419, which is the same except players
+		are allowed to switch between teams.  -Zoid]
 
         Besides the teamplay setting, there are some other options that can
         be modified by editing the source.  These options are constants at
@@ -312,6 +415,8 @@ Capture the Flag
      message will only go to your teammates.
 
 Random Level Selection
+   [This is not enabled in CTF.  In CTF mode, the levels are specifically
+   ordered and choosen.]
    Next level is chosen randomly (RandomLevel in client.qc).  The levels
    e1m7 (House of Chthon), e2m6 (The Dismal Oubliette), e3m4 (Satan's
    Dark Delight) and end (Shub-Niggurath's Pit) removed since they are
@@ -328,7 +433,7 @@ Runes
      - Earth (resistance, half damage)
      - Black (strength, double damage)
      - Hell (haste, double fire rate)
-     - Elder (regeneration) magic runes
+     - Elder (regeneration)
    When someone dies, the rune pops out and can be picked up.  You can only
    carry one rune at a time.
 
@@ -363,19 +468,6 @@ Server Logging
    I save the log files.  Reports on why a client connects, how they died,
    etc.  This is still being fine tuned.
 
-[THIS IS CURRENTLY REMOVED--
-  Since I went to 1.06 and had to re-write most of the code, I ripped
-  what was left of this out.  I'll put re-integrating it shortly, since
-  Ron's now got a 1.06 version of his TeleWeapon stuff out that fixes
-  some of the original problems.]
-//TeleWeapon
-//   Incorporated Ron Mercer's teleweapon patch. This makes it so stuff like
-//   rockets, grenades, nails, etc. go through teleporters.  It also fixes
-//   the lighting gun discharge in water bug, where if you are near the water
-//   (but not in) you get hosed.
-//   NOTE: The teleporting weapons are disabled.  They cause the server to
-//   crash.  I have kept the lightning gun fixes in.
-
 Grappling Hook
    New weapon added.  "Mike" <amichael@asu.alasu.edu> Morning Star, renamed
    to grappling hook.  Changed to use existing models (vore ball for hook,
@@ -391,33 +483,33 @@ Redundant Message Removal
    armor."  This was just cluttering up the message stream and isn't needed
    since pickups are already signified by a flash and an audio cue.
 
-[No longer using ServerModules telefrag removal--now using the 1.06 code
-by John Cash].
-
 How to Install the Modification
 -------------------------------
 Make a new dir in your quake directory. (ie c:\quake\capture)
 then unzip this package into that directory (make sure you use -d with
 pkunzip!).  When done, you'll have the following files:
 
-    ./progs.dat ./autoexec.cfg ./config.cfg ./readme.txt
-    ./capture.txt ./capture.dif
+	./readme.txt ./progs.dat ./autoexec.cfg ./config.cfg
+	./capture.txt ./capture.dif
 
-    ./src/ai.qc ./src/amtest.qc ./src/boss.qc ./src/buttons.qc
-    ./src/client.qc ./src/combat.qc ./src/defs.qc ./src/demon.qc
-    ./src/dog.qc ./src/doors.qc ./src/enforcer.qc ./src/fight.qc
-    ./src/fish.qc ./src/hknight.qc ./src/hook.qc ./src/items.qc
-    ./src/jctest.qc ./src/knight.qc ./src/misc.qc ./src/models.qc
-    ./src/monsters.qc ./src/ogre.qc ./src/oldone.qc ./src/plats.qc
-    ./src/player.qc ./src/progdefs.h ./src/progs.dat ./src/progs.src
-    ./src/shalrath.qc ./src/shambler.qc ./src/soldier.qc ./src/sprites.qc
-    ./src/subs.qc ./src/tarbaby.qc ./src/teamplay.qc ./src/triggers.qc
-    ./src/weapons.qc ./src/wizard.qc ./src/world.qc ./src/zombie.qc
-    ./src/files.dat ./src/telefrag.qc ./src/flame.qc
+	./src/ai.qc ./src/amtest.qc ./src/boss.qc ./src/buttons.qc
+	./src/client.qc ./src/combat.qc ./src/defs.qc ./src/demon.qc
+	./src/dog.qc ./src/doors.qc ./src/enforcer.qc ./src/fight.qc
+	./src/fish.qc ./src/flag.qc ./src/hknight.qc ./src/items.qc
+	./src/jctest.qc ./src/knight.qc ./src/misc.qc ./src/models.qc
+	./src/monsters.qc ./src/ogre.qc ./src/oldone.qc ./src/plats.qc
+	./src/player.qc ./src/progs.src ./src/shalrath.qc ./src/shambler.qc
+	./src/soldier.qc ./src/sprites.qc ./src/subs.qc ./src/tarbaby.qc
+	./src/triggers.qc ./src/weapons.qc ./src/wizard.qc ./src/world.qc
+	./src/zombie.qc ./src/progdefs.h ./src/progs.dat ./src/telefrag.qc
+	./src/charset.txt ./src/files.dat ./src/flame.qc ./src/log.qc
+	./src/hook.qc ./src/admin.qc ./src/teamplay.qc
 
-    ./maps/e1m4.ent ./maps/e1m8.ent ./maps/e1m1.ent ./maps/e1m2.ent
-    ./maps/e1m3.ent ./maps/e1m6.ent ./maps/e1m5.ent ./maps/e2m1.ent
-    ./maps/e2m2.ent ./maps/e2m3.ent ./maps/dobsp.bat ./maps/dobsp.sh
+	./maps/e1m4.ent ./maps/e1m8.ent ./maps/e1m1.ent ./maps/e1m2.ent
+	./maps/e1m3.ent ./maps/e1m6.ent ./maps/e1m5.ent ./maps/e2m1.ent
+	./maps/e2m2.ent ./maps/e2m3.ent ./maps/dobsp.bat ./maps/dobsp.sh
+	./maps/e4m3.ent ./maps/e2m5.ent ./maps/e4m5.ent ./maps/e4m6.ent
+	./maps/e4m4.ent ./maps/dm3.ent ./maps/dm6.ent
 
 You must modify several maps for Quake in order to use capture the flag.
 You must unpack your pak0.pak and pak1.pak files.  There are several
@@ -429,14 +521,17 @@ and under Windows 95 I use winpak
 In the directory you unpacked this archive, there will be maps directory.
 Copy the following files you unpacked from the pak0.pak and pak1.pak
 files into the maps directory in the capture stuff:
-    e1m1.bsp e1m2.bsp e1m3.bsp e1m4.bsp e1m5.bsp e1m6.bsp e1m8.bsp
-    e2m1.bsp e2m2.bsp e2m3.bsp
+	dm3.bsp   dm6.bsp   e1m2.bsp  e1m4.bsp  e1m6.bsp  e2m1.bsp  e2m3.bsp
+	e4m3.bsp  e4m5.bsp  e1m1.bsp  e1m3.bsp  e1m5.bsp  e1m8.bsp  e2m2.bsp
+	e2m5.bsp  e4m4.bsp  e4m6.bsp
+
 Now go to the maps directory and either run dobsp.bat for DOS/Win95 or
 sh dobsp.sh for Linux.  Note that qbsp must be in your path.  qbsp comes
 from id and you can get it at:
 http://www.cdrom.com/pub/quake/idstuff/source/qutils.zip
 This will modify the entity lists for the maps to include the new
 flags and some other items.
+
 [NOTE: This would be a bit easier if I could distribute the already modified
 bsp files, but id's licensing does not permit that.  I emailed Jay Wilbur
 (the biz guy) about this and his response was:
@@ -448,17 +543,30 @@ So that's the official party line].
 Once you have all the modified bsp files in the maps directory (they
 are all pretty big).  Run the server as so:
 
-         ./xquake -dedicated 16 -game 3wave
+         ./xquake -dedicated 16 -game capture
          or
-         winded -dedicated 16 -game 3wave
+         winded -dedicated 16 -game capture
 
 Copyright and Distribution Permissions
 --------------------------------------
 
 Authors MAY use these modifications as a basis for other
 publically available work.
+^^^^^^^^^^
 
-You may do whatever you please with the contents of this archive.
+Use this in a commercial endevour and become a friend of Satan.  Talk to me
+first, ok?
+
+DISCLAIMER:  Dave 'Zoid' Kirsch is not responsible for any harm or
+psychological affects, loss of sleep, fatigue or general
+irresponsibility from playing this patch.
+
+If you put this on a CD, you owe me three free copies of the CD.
+You also owe a free copy of the CD to all the contributed authors listed at
+the top of the document.  At last count, that's ten CDs.  You pay postage,
+too.  Don't like this?  Don't put it on a CD!
+
+If you take my work and rip my name off, you will burn in hell.
 
 Availability
 ------------

@@ -290,7 +290,7 @@ float	IT_SUPER_NAILGUN		= 8;
 float	IT_GRENADE_LAUNCHER		= 16;
 float	IT_ROCKET_LAUNCHER		= 32;
 float	IT_LIGHTNING			= 64;
-float   IT_FLAMETHROWER                 = 128;
+float	IT_EXTRA_WEAPON			= 128;
 
 float	IT_SHELLS				= 256;
 float	IT_NAILS				= 512;
@@ -511,12 +511,17 @@ float		ITEM_RUNE_MASK		= 15;
 
 // ZOID: Capture the flag
 float		ITEM_ENEMY_FLAG		= 16;
+// TEAMPLAY
+float		TEAM_STUFF_COLOR	= 32;
 
 .float		motd_time;
 .float		motd_count;
 
 .float		suicide_count;
 .float		killed;			// have we been killed yet
+
+//McBain: PreviousWeaponCommand
+.float		previous_weapon;	// one of the IT_SHOTGUN, etc flags
 
 //
 // object stuff
@@ -723,10 +728,4 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage;
 float (entity e, float healamount, float ignore) T_Heal; // health function
 
 float(entity targ, entity inflictor) CanDamage;
-
-
-// Flamethrower
-
-.float  onfire;//Flag... set if the entity is on fire
-.entity  firewood;// Pointer to an entity that the flame will burn.
 

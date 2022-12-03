@@ -125,14 +125,6 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 // RUNE: check for double damage for rune of Black Magic powerup
 	if (attacker.player_flag & ITEM_RUNE2_FLAG)
 		damage = damage * 2;
-// check if target has rune of Earth Magic (half damage)
-	if (targ.player_flag & ITEM_RUNE1_FLAG) {
-		damage = damage / 2;
-		if (targ.invincible_sound < time) {
-			sound (targ, CHAN_ITEM, "items/protect3.wav", 1, ATTN_NORM);
-			targ.invincible_sound = time + 2;
-		}
-	}
 // RUNE
 
 // save damage based on the target's armor level
@@ -140,10 +132,10 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 // *TEAMPLAY*
 // TeamArmorDam returns true iff the attacker can damage the target's armor
 
-        if (TeamArmorDam(targ, inflictor, attacker, damage))
-	save = ceil(targ.armortype*damage);
-        else
-                save = 0;
+	if (TeamArmorDam(targ, inflictor, attacker, damage))
+		save = ceil(targ.armortype*damage);
+	else
+		save = 0;
 
 	if (save >= targ.armorvalue)
 	{
@@ -154,6 +146,16 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 
 	targ.armorvalue = targ.armorvalue - save;
 	take = ceil(damage-save);
+
+//RUNE check if target has rune of Earth Magic (half damage)
+	if (targ.player_flag & ITEM_RUNE1_FLAG) {
+		take = take / 2;
+		if (targ.invincible_sound < time) {
+			sound (targ, CHAN_ITEM, "items/protect3.wav", 1, ATTN_NORM);
+			targ.invincible_sound = time + 2;
+		}
+	}
+//RUNE
 
 // add to the damage total for clients, which will be sent as a single
 // message at the end of the frame

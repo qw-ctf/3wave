@@ -82,7 +82,6 @@ $frame axattc1 axattc2 axattc3 axattc4 axattc5 axattc6
 
 $frame axattd1 axattd2 axattd3 axattd4 axattd5 axattd6
 
-
 /*
 ==============================================================================
 PLAYER
@@ -275,6 +274,7 @@ void() player_rocket4   =[$rockatt4, player_rocket5  ] {self.weaponframe=4;};
 void() player_rocket5   =[$rockatt5, player_rocket6  ] {self.weaponframe=5;};
 void() player_rocket6   =[$rockatt6, player_run  ] {self.weaponframe=6;};
 void(float num_bubbles) DeathBubbles;
+
 
 void() PainSound =
 {

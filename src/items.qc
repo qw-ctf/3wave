@@ -402,6 +402,8 @@ void() weapon_touch =
 	local	float	hadammo, best, new, old;
 	local	entity	stemp;
 	local	float	leave;
+//McBain: added prevweapon local variable
+	local	float	prevweapon;
 
 	if (!(other.flags & FL_CLIENT))
 		return;
@@ -434,8 +436,9 @@ void() weapon_touch =
 		hadammo = other.ammo_rockets;
 		new = IT_SUPER_NAILGUN;
 // *TEAMPLAY*
-		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) )
+		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) ) {
 			other.ammo_nails = other.ammo_nails + 30;
+		}
 	}
 	else if (self.classname == "weapon_supershotgun")
 	{
@@ -462,8 +465,6 @@ void() weapon_touch =
 		if (leave && (other.items & IT_GRENADE_LAUNCHER) )
 			return;
 		hadammo = other.ammo_rockets;
-// FLAMETHROWER
-		other.items = other.items | IT_FLAMETHROWER;
 		new = IT_GRENADE_LAUNCHER;
 // *TEAMPLAY*
 		if ( !( coop && (teamplay & TEAM_DROP_ITEMS) ) )
@@ -502,10 +503,17 @@ void() weapon_touch =
 	stemp = self;
 	self = other;
 
+//McBain: temp store old weapon
+	prevweapon = self.weapon;
+
 	if (!deathmatch)
 		self.weapon = new;
 	else
 		Deathmatch_Weapon (old, new);
+
+//McBain: save previous weapon if different
+	if (self.weapon != prevweapon)
+		self.previous_weapon = prevweapon;
 
 	W_SetCurrentAmmo();
 
@@ -1371,23 +1379,13 @@ void() DropBackpack =
 	item = spawn();
 	item.origin = self.origin - '0 0 24';
 
-	// if weapon is flamethrower, change quickly to grenade launcher
-	if (self.weapon == IT_FLAMETHROWER)
-		self.weapon = IT_GRENADE_LAUNCHER;
-
 	item.items = 0; // none by default
 
 //ZOID--axe and hook don't go into backpack
 	if (self.weapon != IT_HOOK || self.weapon != IT_AXE)
 		item.items = self.weapon;
 
-	// If weapon was grenade launcher, flamethrower goes in backpack too
-	if (self.weapon == IT_GRENADE_LAUNCHER)
-		item.items = item.items | IT_FLAMETHROWER;
-
-//	if (item.items == IT_AXE)
-//		item.netname = "Axe";
-	else if (item.items == IT_SHOTGUN)
+	if (item.items == IT_SHOTGUN)
 		item.netname = "Shotgun";
 	else if (item.items == IT_SUPER_SHOTGUN)
 		item.netname = "Double-barrelled Shotgun";
@@ -1470,32 +1468,32 @@ void() RuneTouch =
 
 	// notification of rune, no nofity in team mode
 	if (self.player_flag & ITEM_RUNE1_FLAG) {
-		bprint(other.netname);
-//		bprint(" got the rune of Earth Magic!\n");
-		bprint(" got the rune of Åבעפט Íבחיד!\n");
-//		centerprint(other, "You got the Earth Magic Rune!\n\nRESISTANCE\n\nYou now take half damage!");
-		centerprint(other, "You got the Åבעפט Íבחיד Rune!\n\nÒוףיףפבמדו\n\nYou now take half damage!");
+		if (teamplay == 0) {
+			bprint(other.netname);
+			bprint(" got the rune of Åבעפט Íבחיד!\n");
+		}
+		centerprint(other, "Åבעפט Íבחיד!\n\nÒוףיףפבמדו");
 	}
 	if (self.player_flag & ITEM_RUNE2_FLAG) {
-		bprint(other.netname);
-//		bprint(" got the rune of Black Magic!\n");
-		bprint(" got the rune of Âלבדכ Íבחיד!\n");
-//		centerprint(other, "You got the Black Magic Rune!\n\nSTRENGTH\n\nYou now dish out double damage!");
-		centerprint(other, "You got the Âלבדכ Íבחיד Rune!\n\nÓפעומחפט\n\nYou now dish out double damage!");
+		if (teamplay == 0) {
+			bprint(other.netname);
+			bprint(" got the rune of Âלבדכ Íבחיד!\n");
+		}
+		centerprint(other, "Âלבדכ Íבחיד!\n\nÓפעומחפט");
 	}
 	if (self.player_flag & ITEM_RUNE3_FLAG) {
-		bprint(other.netname);
-//		bprint(" got the rune of Hell Magic!\n");
-		bprint(" got the rune of Èולל Íבחיד!\n");
-//		centerprint(other, "You got the Hell Magic Rune!\n\nHASTE\n\nYou now fire twice fast!");
-		centerprint(other, "You got the Èולל Íבחיד Rune!\n\nÈבףפו\n\nYou now fire twice fast!");
+		if (teamplay == 0) {
+			bprint(other.netname);
+			bprint(" got the rune of Èולל Íבחיד!\n");
+		}
+		centerprint(other, "Èולל Íבחיד!\n\nÈבףפו");
 	}
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
-		bprint(other.netname);
-//		bprint(" got the rune of Elder Magic!\n");
-		bprint(" got the rune of Åלהוע Íבחיד!\n");
-//		centerprint(other, "You got the Elder Magic Rune!\n\nREGENERATION\n\nYou now regenerate!");
-		centerprint(other, "You got the Åלהוע Íבחיד Rune!\n\nÒוחומועבפיןמ\n\nYou now regenerate!");
+		if (teamplay == 0) {
+			bprint(other.netname);
+			bprint(" got the rune of Åלהוע Íבחיד!\n");
+		}
+		centerprint(other, "Åלהוע Íבחיד!\n\nÒוחומועבפיןמ");
 	}
 
 	// backpack touch sound
@@ -1610,50 +1608,3 @@ void() SpawnRunes =
 
 	remove(oself);
 };
-
-// ZOID Capture the flag
-void() item_flag_team1 =
-{
-	if (!deathmatch || !(cvar("teamplay") & TEAM_CAPTURE_FLAG)) {
-		remove(self);
-		return;
-	}
-
-	self.team = TEAM_COLOR1 + 1;
-	self.cnt = 1; // it's at home base
-	precache_model ("progs/w_g_key.mdl");
-	setmodel (self, "progs/w_g_key.mdl");
-	self.touch = TeamCaptureFlagTouch;
-	self.items = IT_KEY2;
-	precache_sound ("misc/medkey.wav");
-	precache_sound ("doors/meduse.wav");
-	self.noise = "misc/medkey.wav";
-	setsize(self, '-16 -16 -24', '16 16 32');
-	// make it glow
-	self.effects = self.effects | EF_DIMLIGHT;
-	StartItem();
-};
-
-void() item_flag_team2 =
-{
-	if (!deathmatch || !(cvar("teamplay") & TEAM_CAPTURE_FLAG)) {
-		remove(self);
-		return;
-	}
-
-	self.team = TEAM_COLOR2 + 1;
-	self.cnt = 1; // it's at home base
-	precache_model ("progs/w_s_key.mdl");
-	setmodel (self, "progs/w_s_key.mdl");
-	self.touch = TeamCaptureFlagTouch;
-	self.items = IT_KEY1;
-	precache_sound ("misc/medkey.wav");
-	precache_sound ("doors/meduse.wav");
-	self.noise = "misc/medkey.wav";
-	setsize(self, '-16 -16 -24', '16 16 32');
-	// make it glow
-	self.effects = self.effects | EF_DIMLIGHT;
-	StartItem();
-};
-
-

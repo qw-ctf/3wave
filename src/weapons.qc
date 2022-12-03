@@ -7,9 +7,6 @@ void(vector org, vector vel, float damage) SpawnBlood;
 void() SuperDamageSound;
 void() HasteSound;
 
-//Flamethrower
-void () W_FireFlame;
-
 // called by worldspawn
 void() W_Precache =
 {
@@ -27,9 +24,25 @@ void() W_Precache =
 	precache_sound ("weapons/grenade.wav");	// grenade launcher
 	precache_sound ("weapons/bounce.wav");		// grenade bounce
 	precache_sound ("weapons/shotgn2.wav");	// super shotgun
-        precache_sound2 ("blob/land1.wav");     // chain go splorch!
-        precache_sound ("plats/medplat1.wav");  // chain cranking out
-        precache_sound ("doors/ddoor1.wav");    // chain cranking in
+
+	precache_sound2 ("blob/land1.wav");     // chain go splorch!
+	if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM) {
+		precache_sound ("weapons/chain1.wav");
+		precache_sound ("weapons/chain2.wav");
+		precache_sound ("weapons/chain3.wav");
+		precache_sound ("weapons/bounce2.wav");
+	}
+
+	// ZOID:
+	// normally the weapon models are precached in the individual item
+	// creation routines.  But since we've added impulse 21 we can drop
+	// weapons at any time.  Must precache all weapon models.
+	precache_model ("progs/g_shot.mdl");
+	precache_model ("progs/g_nail.mdl");
+	precache_model ("progs/g_nail2.mdl");
+	precache_model ("progs/g_rock.mdl");
+	precache_model ("progs/g_rock2.mdl");
+	precache_model ("progs/g_light.mdl");
 };
 
 float() crandom =
@@ -778,7 +791,10 @@ void() W_SetCurrentAmmo =
 	else if (self.weapon == IT_HOOK)
 	{
 		self.currentammo = 0;
-		self.weaponmodel = "progs/v_axe.mdl";
+		if (teamplay & TEAM_CAPTURE_CUSTOM)
+			self.weaponmodel = "progs/v_star.mdl";
+		else
+			self.weaponmodel = "progs/v_axe.mdl";
 		self.weaponframe = 0;
 	}
 	else if (self.weapon == IT_SHOTGUN)
@@ -822,13 +838,6 @@ void() W_SetCurrentAmmo =
 		self.weaponmodel = "progs/v_rock2.mdl";
 		self.weaponframe = 0;
 		self.items = self.items | IT_ROCKETS;
-	}
-	else if (self.weapon == IT_FLAMETHROWER)
-	{
-		self.currentammo = self.ammo_shells;
-		self.weaponmodel = "progs/v_rock.mdl";
-		self.weaponframe = 0;
-		self.items = self.items | IT_SHELLS;
 	}
 	else if (self.weapon == IT_LIGHTNING)
 	{
@@ -979,16 +988,6 @@ void() W_Attack =
 		} else
 			self.attack_finished = time + 0.8;
 	}
-// Flamethrower
-	else if (self.weapon == IT_FLAMETHROWER)
-	{
-		player_shot1();
-		W_FireFlame();
-		if (self.waterlevel >2)
-			self.attack_finished = time + 1;
-		else
-			self.attack_finished = time + 0.1;
-	}
 	else if (self.weapon == IT_LIGHTNING)
 	{
 		player_light1();
@@ -1003,6 +1002,14 @@ void() W_Attack =
 			player_chain3();
 		self.attack_finished = time + 0.1;
 	}
+};
+
+void() NotifyWeapon =
+{
+	if (self.weapon == IT_AXE)
+		sprint(self, "Axe selected.\n");
+	else if (self.weapon == IT_HOOK)
+		sprint(self, "Grappling hook selected.\n");
 };
 
 /*
@@ -1023,15 +1030,17 @@ void() W_ChangeWeapon =
 			fl = IT_HOOK;
 		else
 			fl = IT_AXE;
-	} else if (self.impulse == 2) {
+	} else if (self.impulse == 31) {
+		fl = IT_AXE;
+	} else if (self.impulse == 2 || self.impulse == 32) {
 		fl = IT_SHOTGUN;
 		if (self.ammo_shells < 1)
 			am = 1;
-	} else if (self.impulse == 3) {
+	} else if (self.impulse == 3 || self.impulse == 33) {
 		fl = IT_SUPER_SHOTGUN;
 		if (self.ammo_shells < 2)
 			am = 1;
-	} else if (self.impulse == 4) {
+	} else if (self.impulse == 4 || self.impulse == 34) {
 		fl = IT_NAILGUN;
 		if (self.ammo_nails < 1)
 			am = 1;
@@ -1039,31 +1048,24 @@ void() W_ChangeWeapon =
 		fl = IT_SUPER_NAILGUN;
 		if (self.ammo_nails < 2)
 			am = 1;
-	} else if (self.impulse == 6) {
-		if (self.weapon != IT_GRENADE_LAUNCHER && self.ammo_rockets > 0) {
+	} else if (self.impulse == 35) {
+		fl = IT_SUPER_NAILGUN;
+		if (self.ammo_nails < 2)
+			am = 1;
+	} else if (self.impulse == 6 || self.impulse == 36) {
 		fl = IT_GRENADE_LAUNCHER;
 		if (self.ammo_rockets < 1)
 			am = 1;
-		} else if (self.ammo_shells > 1) {
-				fl = IT_FLAMETHROWER;
-				if (self.ammo_shells < 1)
-					am = 1;
-		} else
-			am = 1;
-	} else if (self.impulse == 7) {
+	} else if (self.impulse == 7 || self.impulse == 37) {
 		fl = IT_ROCKET_LAUNCHER;
 		if (self.ammo_rockets < 1)
 			am = 1;
-	} else if (self.impulse == 8) {
+	} else if (self.impulse == 8 || self.impulse == 38) {
 		fl = IT_LIGHTNING;
 		if (self.ammo_cells < 1)
 			am = 1;
-	} else if (self.impulse == 22) {
+	} else if (self.impulse == 22 || self.impulse == 39) {
 		fl = IT_HOOK;
-	} else if (self.impulse == 50) {
-		fl = IT_FLAMETHROWER;
-		if (self.ammo_shells < 1)
-			am = 1;
 	}
 
 	self.impulse = 0;
@@ -1080,19 +1082,17 @@ void() W_ChangeWeapon =
 		return;
 	}
 
+//McBain: save current weapon
+// For explicite weapon selection, allow previous weapon and new weapon to be
+// same except for IT_HOOK.
+	if (self.weapon != IT_HOOK || fl != IT_HOOK)
+		self.previous_weapon = self.weapon;
+
 //
 // set weapon, set ammo
 //
 	self.weapon = fl;
-	if (self.weapon == IT_FLAMETHROWER)
-		sprint (self,"Flamethrower selected.\n");
-	else if (self.weapon == IT_GRENADE_LAUNCHER)
-		sprint (self,"Grenade Launcher selected.\n");
-	else if (self.weapon == IT_AXE)
-		sprint(self, "Axe selected.\n");
-	else if (self.weapon == IT_HOOK)
-		sprint(self, "Grappling hook selected.\n");
-
+	NotifyWeapon();
 	W_SetCurrentAmmo ();
 };
 
@@ -1117,7 +1117,6 @@ void() CheatCommand =
 		IT_NAILGUN |
 		IT_SUPER_NAILGUN |
 		IT_GRENADE_LAUNCHER |
-                IT_FLAMETHROWER |
 		IT_ROCKET_LAUNCHER |
 		IT_KEY1 | IT_KEY2;
 
@@ -1142,6 +1141,9 @@ void() CycleWeaponCommand =
 
 	it = self.items;
 	self.impulse = 0;
+
+//McBain: save current weapon
+	self.previous_weapon = self.weapon;
 
 	while (1)
 	{
@@ -1172,11 +1174,9 @@ void() CycleWeaponCommand =
 			if (self.ammo_rockets < 1)
 				am = 1;
 		} else if (self.weapon == IT_GRENADE_LAUNCHER) {
-			self.weapon = IT_FLAMETHROWER;
+			self.weapon = IT_ROCKET_LAUNCHER;
 			if (self.ammo_rockets < 1)
 				am = 1;
-		} else if (self.weapon == IT_FLAMETHROWER) {
-		   self.weapon = IT_ROCKET_LAUNCHER;
 		} else if (self.weapon == IT_ROCKET_LAUNCHER) {
 			self.weapon = IT_LIGHTNING;
 			if (self.ammo_cells < 1)
@@ -1185,11 +1185,7 @@ void() CycleWeaponCommand =
 
 		if ( (it & self.weapon) && am == 0)
 		{
-                        if (self.weapon == IT_FLAMETHROWER)
-                                sprint(self,"Flamethrower\n");
-                        else if (self.weapon == IT_GRENADE_LAUNCHER)
-                                sprint(self,"Grenade Launcher\n");
-
+			NotifyWeapon();
 			W_SetCurrentAmmo ();
 			return;
 		}
@@ -1211,6 +1207,9 @@ void() CycleWeaponReverseCommand =
 	it = self.items;
 	self.impulse = 0;
 
+//McBain: save current weapon
+	self.previous_weapon = self.weapon;
+
 	while (1)
 	{
 		am = 0;
@@ -1230,7 +1229,7 @@ void() CycleWeaponReverseCommand =
 		else if (self.weapon == IT_GRENADE_LAUNCHER)
 		{
 			self.weapon = IT_SUPER_NAILGUN;
-			if (self.ammo_nails < 2)
+			if (self.ammo_nails < 1)
 				am = 1;
 		}
 		else if (self.weapon == IT_SUPER_NAILGUN)
@@ -1268,11 +1267,54 @@ void() CycleWeaponReverseCommand =
 
 		if ( (it & self.weapon) && am == 0)
 		{
+			NotifyWeapon();
 			W_SetCurrentAmmo ();
 			return;
 		}
 	}
 
+};
+
+//McBain: Here's the beef...
+/*
+============
+PreviousWeaponCommand
+============
+*/
+void() PreviousWeaponCommand =
+{
+	local	float	fl, am;
+
+	self.impulse = 0;
+	am = 0;
+
+	fl = self.weapon;
+	self.weapon = self.previous_weapon;
+	self.previous_weapon = fl;
+
+	// this might not be the best method, but I'll be able to play sooner
+	if (self.weapon == IT_SHOTGUN || self.weapon == IT_SUPER_SHOTGUN) {
+		if (self.ammo_shells < 1)
+			am = 1;
+	}
+	else if (self.weapon == IT_NAILGUN || self.weapon == IT_SUPER_NAILGUN) {
+		if (self.ammo_nails < 1)
+			am = 1;
+	}
+	else if (self.weapon == IT_GRENADE_LAUNCHER || self.weapon == IT_ROCKET_LAUNCHER) {
+		if (self.ammo_rockets < 1)
+			am = 1;
+	}
+	else if (self.weapon == IT_LIGHTNING) {
+		if (self.ammo_cells < 1)
+			am = 1;
+	}
+	// ignore AXE & HOOK -- no ammo needed
+
+	if (am)
+		self.weapon = W_BestWeapon ();
+
+	W_SetCurrentAmmo ();
 };
 
 /*
@@ -1285,6 +1327,8 @@ Just for development
 void() ServerflagsCommand =
 {
 	serverflags = serverflags * 2 + 1;
+// ZOID:  Bug fix
+	serverflags = (serverflags & 15);
 };
 
 void() QuadCheat =
@@ -1297,6 +1341,7 @@ void() QuadCheat =
 	dprint ("quad cheat\n");
 };
 
+//ZOID:  Uhm, where am I?
 void() PrintLocation =
 {
 	local string p;
@@ -1319,7 +1364,11 @@ ImpulseCommands
 //more efficient.  Using a non-existant impulse is still the worst case. :(
 void() ImpulseCommands =
 {
- 	if ((self.impulse >= 1 && self.impulse <= 8) || self.impulse == 22 ||
+	if (self.accessparm) // admin functions
+		CheckAdminCmd();
+
+	else if ((self.impulse >= 1 && self.impulse <= 8) || self.impulse == 22 ||
+		(self.impulse >= 31 && self.impulse <= 40) ||
  		self.impulse == 50)
 		W_ChangeWeapon ();
 
@@ -1334,6 +1383,12 @@ void() ImpulseCommands =
 
 	else if (self.impulse == 12)
 		CycleWeaponReverseCommand ();
+
+//McBain: I picked 69 -- seems appropriate!  I hope 69 hasn't been used in
+// other add-ons.  This is my first attempt at Quake C, and I hope I haven't
+// violated any Quake C ettiquette.  :(
+	else if (self.impulse == 69)
+		PreviousWeaponCommand ();
 
 	else if (self.impulse == 99)
 		PrintLocation();
@@ -1350,6 +1405,12 @@ void() ImpulseCommands =
 // Impulse 25 prints info about the current teamplay settings.
 	else if (self.impulse == 25)
 		TeamPrintSettings ();
+
+// *Capture The Flag - Status report by Wonko
+// Impulse 23 prints the current status of your flag and the
+// enemy flag (summarizes the endless messages)
+	else if (self.impulse == 23)
+		TeamFlagStatusReport();
 
 // ** M U L T I S K I N  1.1  (start)
 
@@ -1392,6 +1453,8 @@ void() ImpulseCommands =
 
 	else if (self.impulse == 255)
 		QuadCheat ();
+	else
+		CheckAdminCmd();
 
 	self.impulse = 0;
 };

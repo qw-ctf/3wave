@@ -288,7 +288,12 @@ void() worldspawn =
 	precache_model ("progs/s_spike.mdl");
 
 // for hook
-    precache_model ("progs/v_spike.mdl");
+	if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM) {
+		precache_model ("progs/star.mdl");
+		precache_model ("progs/bit.mdl");
+		precache_model ("progs/v_star.mdl");
+	} else
+		precache_model ("progs/v_spike.mdl");
 
 	precache_model ("progs/backpack.mdl");
 
@@ -296,7 +301,8 @@ void() worldspawn =
 
 	precache_model ("progs/v_light.mdl");
 
-// rune precache
+
+//ZOID: rune precache
 	precache_model ("progs/end1.mdl");
 	precache_model ("progs/end2.mdl");
 	precache_model ("progs/end3.mdl");

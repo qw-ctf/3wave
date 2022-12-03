@@ -1,16 +1,19 @@
 progs.dat
 
 defs.qc
+log.qc			// Console logging of game actions
 teamplay.qc     // Compile the teamplay file
+admin.qc		// Remote admin functions
 subs.qc
 fight.qc
 ai.qc
 combat.qc
 items.qc
+flag.qc
 
 weapons.qc
 
-flame.qc
+//flame.qc 		// flamethrower removed
 
 telefrag.qc		// from server modules
 

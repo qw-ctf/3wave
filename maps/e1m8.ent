@@ -2595,173 +2595,170 @@
 // capture spawns
 // team1
 {
-"origin" "550 -300 -532"
+"origin" "592 -150 300"
 "classname" "item_flag_team1"
 }
 {
-"angle" "90"
-"origin" "500 -300 -552"
+"angle" "270"
+"origin" "492 -220 280"
 "classname" "info_player_team1"
 }
 {
-"angle" "90"
-"origin" "600 -300 -552"
+"angle" "270"
+"origin" "592 -220 280"
 "classname" "info_player_team1"
 }
 {
-"angle" "90"
-"origin" "500 -220 -552"
+"angle" "270"
+"origin" "692 -220 280"
 "classname" "info_player_team1"
 }
 {
-"angle" "90"
-"origin" "600 -220 -552"
+"angle" "270"
+"origin" "492 -320 280"
 "classname" "info_player_team1"
 }
 {
-"angle" "90"
-"origin" "500 -140 -552"
+"angle" "270"
+"origin" "592 -320 280"
 "classname" "info_player_team1"
 }
 {
-"angle" "90"
-"origin" "600 -140 -552"
+"angle" "270"
+"origin" "692 -320 280"
 "classname" "info_player_team1"
+}
+// base one weapons upgrade
+{
+"classname" "item_health"
+"origin" "542 -400 280"
+}
+{
+"origin" "592 -400 280"
+"classname" "item_health"
+}
+{
+"classname" "item_health"
+"origin" "642 -400 280"
+}
+{
+"origin" "542 -450 280"
+"classname" "item_shells"
+}
+{
+"origin" "592 -450 280"
+"classname" "item_shells"
+}
+{
+"origin" "642 -450 280"
+"classname" "item_shells"
+}
+{
+"origin" "542 -500 280"
+"classname" "item_spikes"
+}
+{
+"origin" "592 -500 280"
+"classname" "item_spikes"
+}
+{
+"origin" "642 -500 280"
+"classname" "item_spikes"
+}
+{
+"origin" "542 -550 280"
+"classname" "weapon_supershotgun"
+}
+{
+"origin" "592 -550 280"
+"classname" "item_armor2"
+}
+{
+"origin" "642 -550 280"
+"classname" "weapon_supernailgun"
 }
 
 // team2
 {
-"origin" "660 132 300"
+"origin" "672 132 300"
 "classname" "item_flag_team2"
 }
 {
 "angle" "0"
-"origin" "560 200 280"
+"origin" "572 200 280"
 "classname" "info_player_team2"
 }
 {
 "angle" "0"
-"origin" "660 200 280"
+"origin" "672 200 280"
 "classname" "info_player_team2"
 }
 {
 "angle" "0"
-"origin" "760 200 280"
+"origin" "772 200 280"
 "classname" "info_player_team2"
 }
 {
 "angle" "0"
-"origin" "560 300 280"
+"origin" "572 300 280"
 "classname" "info_player_team2"
 }
 {
 "angle" "0"
-"origin" "660 300 280"
+"origin" "672 300 280"
 "classname" "info_player_team2"
 }
 {
 "angle" "0"
-"origin" "760 300 280"
+"origin" "772 300 280"
 "classname" "info_player_team2"
 }
-
-// base one weapons upgrade
-//{
-//"classname" "item_health"
-//"origin" "-488 2064 1220"
-//}
-//{
-//"origin" "-488 2112 1220"
-//"classname" "item_health"
-//}
-//{
-//"classname" "item_health"
-//"origin" "-488 2160 1220"
-//}
-//{
-//"origin" "-72 2064 1220"
-//"classname" "item_shells"
-//}
-//{
-//"origin" "-120 2064 1220"
-//"classname" "item_shells"
-//}
-//{
-//"origin" "-168 2064 1220"
-//"classname" "item_shells"
-//}
-//{
-//"origin" "-72 2112 1220"
-//"classname" "item_spikes"
-//}
-//{
-//"origin" "-120 2112 1220"
-//"classname" "item_spikes"
-//}
-//{
-//"origin" "-168 2112 1220"
-//"classname" "item_spikes"
-//}
-//{
-//"origin" "-72 2160 1220"
-//"classname" "weapon_supershotgun"
-//}
-//{
-//"origin" "-120 2160 1220"
-//"classname" "item_armor2"
-//}
-//{
-//"origin" "-168 2160 1220"
-//"classname" "weapon_supernailgun"
-//}
-//
-//// base two weapons upgrade
-//{
-//"classname" "item_shells"
-//"origin" "1240 768 1384"
-//}
-//{
-//"classname" "item_shells"
-//"origin" "1192 768 1384"
-//}
-//{
-//"classname" "item_shells"
-//"origin" "1144 768 1384"
-//}
-//{
-//"classname" "item_spikes"
-//"origin" "1240 816 1384"
-//}
-//{
-//"classname" "item_spikes"
-//"origin" "1192 816 1384"
-//}
-//{
-//"classname" "item_spikes"
-//"origin" "1144 816 1384"
-//}
-//{
-//"origin" "1240 864 1384"
-//"classname" "weapon_supershotgun"
-//}
-//{
-//"classname" "item_armor2"
-//"origin" "1192 864 1384"
-//}
-//{
-//"classname" "weapon_supernailgun"
-//"origin" "1144 864 1384"
-//}
-//{
-//"origin" "1240 912 1384"
-//"classname" "item_health"
-//}
-//{
-//"classname" "item_health"
-//"origin" "1192 912 1384"
-//}
-//{
-//"classname" "item_health"
-//"origin" "1144 912 1384"
-//}
-// end
+// base two weapons upgrade
+{
+"classname" "item_health"
+"origin" "622 420 280"
+}
+{
+"classname" "item_health"
+"origin" "672 420 280"
+}
+{
+"classname" "item_health"
+"origin" "722 420 280"
+}
+{
+"origin" "622 470 280"
+"classname" "item_shells"
+}
+{
+"origin" "672 470 280"
+"classname" "item_shells"
+}
+{
+"origin" "722 470 280"
+"classname" "item_shells"
+}
+{
+"origin" "622 520 280"
+"classname" "item_spikes"
+}
+{
+"origin" "672 520 280"
+"classname" "item_spikes"
+}
+{
+"origin" "722 520 280"
+"classname" "item_spikes"
+}
+{
+"origin" "622 570 280"
+"classname" "weapon_supershotgun"
+}
+{
+"origin" "672 570 280"
+"classname" "item_armor2"
+}
+{
+"origin" "722 570 280"
+"classname" "weapon_supernailgun"
+}
