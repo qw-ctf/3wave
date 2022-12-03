@@ -127,6 +127,15 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 		damage = damage * 2;
 // RUNE
 
+
+	// *XXX* EXPERT CTF mark players who hurt the flag carrier, so they
+	// are worth more points for a while.
+ 	if ( (attacker.classname == "player") && // attacker must be a player
+ 	     (targ.player_flag & ITEM_ENEMY_FLAG) && // target is a flag carrier
+ 	     (attacker.lastteam != targ.lastteam) && // target and attacker on diff teams
+ 	     (targ.lastteam > 0) ) // unconnected check?
+ 		attacker.last_hurt_carrier = time;
+
 // save damage based on the target's armor level
 
 // *TEAMPLAY*

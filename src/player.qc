@@ -575,7 +575,7 @@ void() PlayerDie =
 	if (deathmatch || coop) {
 		DropBackpack();
 		DropRune();
-		TeamCaptureDropFlag();
+		TeamCaptureDropFlagOfPlayer(self);
 	}
 
 	if (self.killed == 2)

@@ -17,11 +17,11 @@ void() MOTD =
 		self.motd_count = self.motd_count + 1;
 		if (teamplay & TEAM_CAPTURE_FLAG)
 			if (self.team == TEAM_COLOR1 + 1)
-				centerprint(self, "Welcome!\nRunning ThreeWave CTF 3.0\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
+				centerprint(self, "Welcome!\nRunning ThreeWave CTF 3.2\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
 			else
-				centerprint(self, "Welcome!\nRunning Threewave CTF 3.0\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
+				centerprint(self, "Welcome!\nRunning Threewave CTF 3.2\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
 		else if (teamplay)
-			centerprint(self, "Welcome!\nRunning Threewave CTF 3.0\n\nTEAMPLAY IS ACTIVE");
+			centerprint(self, "Welcome!\nRunning Threewave CTF 3.2\n\nTEAMPLAY IS ACTIVE");
 		else
 			centerprint(self, "Welcome!\nRunning ThreeWave Server Mods");
 		return;
@@ -32,7 +32,7 @@ void() MOTD =
 				sprint(self, "You are playing\nCUSTOM цаптуре тхе флаг!\n"); // CAPTURE THE FLAG
 			else
 				sprint(self, "You are playing\nцаптуре тхе флаг!\n"); // CAPTURE THE FLAG
-			sprint(self, "  Version 3.0\n");
+			sprint(self, "  Version 3.2\n");
 		}
 	}
 	self.motd_time = 0;
@@ -57,8 +57,8 @@ void () CheckDimLight = {
 	if (self.super_damage_finished > time)
 		flag = 1;
 	// flag
-	if (self.player_flag & ITEM_ENEMY_FLAG)
-		flag = 1;
+//	if (self.player_flag & ITEM_ENEMY_FLAG)
+//		flag = 1;
 
 	if (flag)
 		self.effects = self.effects | EF_DIMLIGHT;
@@ -104,18 +104,22 @@ void() SetChangeParms =
 		self.health = 100;
 	if (self.health < 50)
 		self.health = 50;
-	parm1 = self.items;
-	parm2 = self.health;
-	parm3 = self.armorvalue;
-	if (self.ammo_shells < 25)
-		parm4 = 25;
-	else
-		parm4 = self.ammo_shells;
-	parm5 = self.ammo_nails;
-	parm6 = self.ammo_rockets;
-	parm7 = self.ammo_cells;
-	parm8 = self.weapon;
-	parm9 = self.armortype * 100;
+	if (teamplay & TEAM_CAPTURE_FLAG) // don't carry items between levels in CTF
+		SetNewParms();
+	else {
+		parm1 = self.items;
+		parm2 = self.health;
+		parm3 = self.armorvalue;
+		if (self.ammo_shells < 25)
+			parm4 = 25;
+		else
+			parm4 = self.ammo_shells;
+		parm5 = self.ammo_nails;
+		parm6 = self.ammo_rockets;
+		parm7 = self.ammo_cells;
+		parm8 = self.weapon;
+		parm9 = self.armortype * 100;
+	}
 // *TEAMPLAY*
 	parm10 = self.lastteam;	// Save the current team of the player
 	parm16 = self.player_flag;
@@ -125,13 +129,19 @@ void() SetNewParms =
 {
 	parm1 = IT_SHOTGUN | IT_AXE | IT_HOOK;
 	parm2 = 100;
-	parm3 = 0;
-	parm4 = 25;
+	if (teamplay & TEAM_CAPTURE_FLAG) {
+		parm3 = 50;
+		parm9 = 30;
+		parm1 = parm1 + IT_ARMOR1;
+	} else {
+		parm3 = 0;
+		parm9 = 0;
+	}
+	parm4 = 40;
 	parm5 = 0;
 	parm6 = 0;
 	parm7 = 0;
-	parm8 = 1;
-	parm9 = 0;
+	parm8 = IT_SHOTGUN;
 // *TEAMPLAY*
 	parm10 = -1;	// Reset
 	parm16 = 0;
@@ -159,6 +169,16 @@ void() DecodeLevelParms =
 	self.ammo_cells = parm7;
 	self.weapon = parm8;
 	self.armortype = parm9 * 0.01;
+
+	// *XXX* EXPERT CTF
+
+	// Reset times for additional scoring system on level change and server join
+	// dprint("decode level parms\n");
+	self.last_returned_flag = -10;
+	self.last_fragged_carrier = -10;
+	self.flag_since = -10;
+	self.last_hurt_carrier = -10;
+
 // *TEAMPLAY*
 	if(TeamColorIsLegal(parm10 - 1))
 		self.lastteam = parm10;
@@ -365,7 +385,10 @@ void() changelevel_touch =
 	if (other.classname != "player")
 		return;
 
-	if ((cvar("noexit") == 1) && (teamplay & TEAM_CAPTURE_FLAG))
+// *XXX* EXPERT CTF
+// Removed code that made exits do nothing in CTF games
+
+	if (cvar("noexit") && (teamplay & TEAM_CAPTURE_FLAG))
 		return;
 
 	if ((cvar("noexit") == 1) || ((cvar("noexit") == 2) && (mapname != "start")))
@@ -469,7 +492,7 @@ void() ClientKill =
 	bprint (self.netname);
 	bprint (" suicides\n");
 	DropRune();
-	TeamCaptureDropFlag();
+    TeamCaptureDropFlagOfPlayer(self);
 	set_suicide_frame ();
 	self.modelindex = modelindex_player;
 	self.frags = self.frags - 2;	// extra penalty
@@ -581,6 +604,8 @@ void() PutClientInServer =
 	self.staydeadtime = 0;
 	self.regen_time = 0;
 	self.rune_notice_time = 0;
+
+	self.last_hurt_carrier = -10;
 
 	DecodeLevelParms ();
 
@@ -794,14 +819,6 @@ local string s;
 		percent = cvar("temp1") & 127;
 		idlvl = (cvar("temp1") & 3968) / 128;
 		ctflvl = (cvar("temp1") & 126976) / 4096;
-dprint("RandomLevel:()\n");
-dprint("  percent=");
-dprint(ftos(percent));
-dprint("  idlvl=");
-dprint(ftos(idlvl));
-dprint("  ctflvl=");
-dprint(ftos(ctflvl));
-dprint("\n");
 
 		if ((random() < percent / 100.0) && (teamplay & TEAM_CAPTURE_CUSTOM)) {
 			ctflvl = ctflvl + 1;
@@ -906,6 +923,11 @@ void() CheckRules =
 {
 	local	float		timelimit;
 	local	float		fraglimit;
+	local	entity		p;
+	local	float		total1, total2;
+
+	// *XXX* EXPERT CTF variables for team frag count
+	local string	s;
 
 	if (gameover)	// someone else quit the game already
 		return;
@@ -913,17 +935,50 @@ void() CheckRules =
 	timelimit = cvar("timelimit") * 60;
 	fraglimit = cvar("fraglimit");
 
-	if (timelimit && time >= timelimit)
-	{
+	if ((timelimit && time >= timelimit) ||
+		(fraglimit && (self.frags >= fraglimit))) {
+		// count up total
+		total1 = total2 = 0;
+		p = find(world, classname, "player");
+		while (p != world) {
+			if (p.lastteam == TEAM_COLOR1 + 1)
+				total1 = total1 + p.frags;
+			else if (p.lastteam == TEAM_COLOR2 + 1)
+				total2 = total2 + p.frags;
+			p = find(p, classname, "player");
+		}
+
+		if (total1 > total2) {
+			bprint("ред team won the level with ");
+			s = ftos(total1);
+			bprint(s);
+			bprint(" points!\n");
+			bprint("блуе team lost with ");
+			s = ftos(total2);
+			bprint(s);
+			bprint(" points.\n");
+		} else if (total1 < total2) {
+			bprint("блуе team won the level with ");
+			s = ftos(total1);
+			bprint(s);
+			bprint(" points!\n");
+			bprint("ред team lost with ");
+			s = ftos(total2);
+			bprint(s);
+			bprint(" points.\n");
+		} else {
+			bprint("блуе and ред team tied level with ");
+			s = ftos(total1);
+			bprint(s);
+			bprint(" points!\n");
+		}
 		NextLevel ();
 		return;
 	}
 
-	if (fraglimit && self.frags >= fraglimit)
-	{
-		NextLevel ();
-		return;
-	}
+	// update team scores?
+	TeamCaptureCheckUpdate();
+
 };
 
 //============================================================================
@@ -1488,8 +1543,10 @@ void() ClientDisconnect =
 	bprint (" frags\n");
 	sound (self, CHAN_BODY, "player/tornoff2.wav", 1, ATTN_NONE);
 	DropRune();
-	TeamCaptureDropFlag();
+    TeamCaptureDropFlagOfPlayer(self);
 	set_suicide_frame ();
+
+	self.lastteam = -50;
 
 	LogMsg(self, "DISCONNECT");
 };
@@ -1509,12 +1566,38 @@ called when a player dies
 */
 void(entity targ, entity attacker) ClientObituary =
 {
+
+	// *XXX* EXPERT CTF variable for
+	// flag/flag carrier defense bonus determination
+	local	entity head;
+	local float flag_radius;
+	local float flag_carrier_radius;
+
 	local	float rnum;
 	local	string deathstring, deathstring2, what, s;
 	rnum = random();
 
 	if (targ.classname == "player")
 	{
+
+		// *XXX* EXPERT CTF:
+		// When the flag carrier dies, reset the last_hurt_carrier field in
+		// all players on the opposite team from the flag carrier.  The carrier
+		// has been killed, so there is no longer a reason to award points for
+		// killing off his assailants
+		if (targ.player_flag & ITEM_ENEMY_FLAG) {
+
+			head = find(world, classname, "player");
+
+			while (head != world) {
+				if (head.team != targ.team) {
+					head.last_hurt_carrier = -10;
+				}
+				head = find(head, classname, "player");
+			}
+		}
+		// END EXPERT CTF
+
 		if (attacker.classname == "teledeath")
 		{
 			bprint (targ.netname);
@@ -1585,26 +1668,163 @@ void(entity targ, entity attacker) ClientObituary =
 			}
 			else
 			{
-// *TEAMPLAY*
-// TeamFragPenalty returns true if the attacker gets a frag penalty for
-// killing this target.  It also deducts frags as needed.
-				if (!TeamFragPenalty(targ, attacker))
-					//ZOID: If in capture mode, do we count regular frags?
-					if ((targ.player_flag & ITEM_ENEMY_FLAG) &&
-						targ.team != attacker.team) {
-						//ZOID: fragged enemy flag carrier
-						attacker.frags = attacker.frags +
-							TEAM_CAPTURE_FRAG_CARRIER_BONUS;
-						sprint(attacker, "Enemy carrier killed: ");
-						s = ftos(TEAM_CAPTURE_FRAG_CARRIER_BONUS);
-						sprint(attacker, s);
-						sprint(attacker, " point bonus\n");
-					} else
-						attacker.frags = attacker.frags + 1;
+ 				// *TEAMPLAY*
+ 				// TeamFragPenalty returns true if the attacker gets a frag penalty for
+ 				// killing this target.  It also deducts frags as needed.
+ 				if (!TeamFragPenalty(targ, attacker)) {
 
-// *TEAMPLAY*
-// TeamDeathPenalty kills the attacker if necessary and adjusts frags to
-// offset the one frag penalty for dying.
+ 					// the attacker is award the normal one frag.. now we
+ 					// determine if he gets any bonuses
+ 					attacker.frags = attacker.frags + 1;
+
+ 					if ((targ.player_flag & ITEM_ENEMY_FLAG) &&
+ 						(targ.team != attacker.team)) {
+ 						//ZOID: one team fragged the other team's flag carrier
+
+ 						// *XXX* EXPERT CTF
+ 						// Mark the attacker with the time at which he killed the flag
+ 						// carrier, for awarding assist points
+
+ 						attacker.last_fragged_carrier = time;
+
+ 						// *XXX* EXPERT CTF: give player only the normal amount of frags
+ 						// if the carrier has only had the flag for a few seconds, to
+ 						// prevent ppl intentionally allowing enemies to grab the flag,
+ 						// then immediately fragging them
+
+ 						if (targ.flag_since + TEAM_CAPTURE_CARRIER_FLAG_SINCE_TIMEOUT > time) {
+ 							sprint(attacker, "Enemy flag carrier killed, no bonus\n");
+ 						} else {
+ 							attacker.frags = attacker.frags + TEAM_CAPTURE_FRAG_CARRIER_BONUS;
+                         			// TeamScore (attacker, TEAM_CAPTURE_FRAG_CARRIER_BONUS);
+ 							sprint(attacker, "Enemy flag carrier killed: ");
+ 							s = ftos(TEAM_CAPTURE_FRAG_CARRIER_BONUS);
+ 							sprint(attacker, s);
+ 							sprint(attacker, " bonus frags\n");
+ 						}
+ 						// END FLAG CARRIER FRAG CODE
+ 					}
+
+ 					// *XXX* EXPERT CTF
+ 					// This code checks for all game-critical kills OTHER THAN fragging the enemy
+ 					// flag carrier, like killing players who are trying to kill your flag carrier
+ 					// or trying to grab your flag, and hands out bonus frags.
+
+ 					// The two variables below track whether special bonus frags have already
+ 					// been awarded for the attacker or target being near the flag or flag carrier.
+
+ 					flag_radius = 0;
+ 					flag_carrier_radius = 0;
+
+ 					// get a string for the attacker's team now, for later announcements
+ 					s = GetCTFTeam(attacker.team);
+
+ 					if ((targ.last_hurt_carrier + TEAM_CAPTURE_CARRIER_DANGER_PROTECT_TIMEOUT > time) &&
+ 					    !(attacker.player_flag & ITEM_ENEMY_FLAG) ) {
+ 						// a player on the same team as the flag carrier killed
+ 						// someone who recently shot the flag carrier
+ 						attacker.frags = attacker.frags +
+ 							TEAM_CAPTURE_CARRIER_DANGER_PROTECT_BONUS;
+ 						flag_carrier_radius = 1;
+ 						// NOTE: getting CARRIER_DANGER_PROTECT_BONUS precludes getting
+ 						// other kinds of bonuses for defending the flag carrier, since
+ 						// it's worth more points
+ 						bprint(attacker.netname);
+ 						bprint(" defends ");
+ 						bprint(s);
+ 						bprint("'s flag carrier against an agressive enemy\n");
+ 					}
+
+ 					// *XXX* EXPERT CTF
+ 					// Bonusus for defending the flag carrier or the flag itself.
+ 					// Extra frags are awarded if either the attacker or the target are
+ 					// 1. within 40 feet of a flag carrier on the same team as the attacker
+ 					// 2. within 40 feet of the attacker's flag
+ 					// These bonuses are cumulative with respect to defending both the
+ 					// flag and the flag carrier at the same time, but not cumulative with
+ 					// respect to both the target and attacker being near the object being defended
+
+ 					// find flags or flag carriers within a radius of the attacker
+ 					head = findradius(attacker.origin, TEAM_CAPTURE_ATTACKER_PROTECT_RADIUS);
+
+ 					while (head) {
+ 						if (head.classname == "player") {
+ 							if ( (head.team == attacker.team) &&
+ 							     (head.player_flag & ITEM_ENEMY_FLAG) &&
+ 							     (head != attacker) && // self defense
+ 							     (!flag_carrier_radius) ) {
+								// attacker was near his own flag carrier
+ 								attacker.frags = attacker.frags +
+ 									TEAM_CAPTURE_CARRIER_PROTECT_BONUS;
+ 								flag_carrier_radius = 1;
+ 								bprint(attacker.netname);
+ 								bprint(" defends ");
+ 								bprint(s);
+ 								bprint("'s flag carrier\n");
+ 							}
+ 						}
+ 						if ( (head.classname == "item_flag_team1") ||
+ 						     (head.classname == "item_flag_team2")) {
+ 							if (((attacker.team == (TEAM_COLOR1 + 1)) &&
+								(head.classname == "item_flag_team1")) ||
+ 								((attacker.team == (TEAM_COLOR2 + 1)) &&
+ 								(head.classname == "item_flag_team2"))) {
+								// attacker was near his own flag
+ 								attacker.frags = attacker.frags +
+ 									TEAM_CAPTURE_FLAG_DEFENSE_BONUS;
+ 								flag_radius = 1;
+ 								bprint(attacker.netname);
+ 								bprint(" defends the ");
+ 								bprint(s);
+ 								bprint(" flag\n");
+ 							}
+ 						}
+ 						head = head.chain;
+ 					}
+
+ 					// find flags or flag carriers within a radius from the target
+ 					head = findradius(targ.origin, TEAM_CAPTURE_TARGET_PROTECT_RADIUS);
+ 					while (head) {
+ 						if (head.classname == "player") {
+ 							if ( (head.team == attacker.team) &&
+ 							     (head.player_flag & ITEM_ENEMY_FLAG) &&
+ 							     (head != attacker) &&
+ 							     (!flag_carrier_radius)) { // prevents redundant points awarded
+ 								// target was near attacker's flag carrier
+ 								attacker.frags = attacker.frags +
+ 									TEAM_CAPTURE_CARRIER_PROTECT_BONUS;
+ 								flag_carrier_radius = 1;
+ 								bprint(attacker.netname);
+ 								bprint(" defends ");
+ 								bprint(s);
+ 								bprint("'s flag carrier\n");
+ 							}
+ 						}
+						if (((attacker.team == (TEAM_COLOR1 + 1)) &&
+							(head.classname == "item_flag_team1")) ||
+							((attacker.team == (TEAM_COLOR2 + 1)) &&
+							(head.classname == "item_flag_team2"))
+							&& (!flag_radius)) { // prevents redundant points awarded
+							// target was near attacker's flag
+							attacker.frags = attacker.frags +
+								TEAM_CAPTURE_FLAG_DEFENSE_BONUS;
+							flag_radius = 1;
+							bprint(attacker.netname);
+							bprint(" defends the ");
+							bprint(s);
+							bprint(" flag\n");
+						}
+ 						head = head.chain;
+ 					}
+ 				}
+
+ 				// *XXX* EXPERT CTF
+ 				// End frag determination code.  Now determine death text for
+ 				// a member of one team killing a member of the other
+
+ 				// *TEAMPLAY*
+ 				// TeamDeathPenalty kills the attacker if necessary and adjusts frags to
+ 				// offset the one frag penalty for dying.
 				TeamDeathPenalty(targ, attacker);
 
 				rnum = attacker.weapon;
@@ -1631,6 +1851,8 @@ void(entity targ, entity attacker) ClientObituary =
 				if (rnum == IT_SUPER_SHOTGUN)
 				{
 					deathstring = " ate 2 loads of ";
+					if (targ.health < -40)
+						deathstring = " ate a box of ";
 					deathstring2 = "'s buckshot\n";
 					what = "supershotgun";
 				}
@@ -1659,22 +1881,32 @@ void(entity targ, entity attacker) ClientObituary =
 				}
 				if (rnum == IT_ROCKET_LAUNCHER)
 				{
-					deathstring = " rides ";
-					deathstring2 = "'s rocket\n";
-					if (targ.health < -40)
-					{
-						deathstring = " was gibbed by ";
-						deathstring2 = "'s rocket\n" ;
+					if (attacker.items & IT_QUAD) {
+						deathstring = " was destroyed by ";
+						deathstring2 = "'s Quad rocket\n";
+					} else {
+						deathstring = " rides ";
+						deathstring2 = "'s rocket\n";
+						if (targ.health < -40)
+						{
+							deathstring = " was gibbed by ";
+							deathstring2 = "'s rocket\n" ;
+						}
 					}
 					what = "rocket";
 				}
 				if (rnum == IT_LIGHTNING)
 				{
-					deathstring = " accepts ";
-					if (attacker.waterlevel > 1)
-						deathstring2 = "'s discharge\n";
-					else
-						deathstring2 = "'s shaft\n";
+					if (attacker.items & IT_QUAD) {
+						deathstring = " was touched by ";
+						deathstring2 = "'s Quad lightning\n";
+					} else {
+						deathstring = " accepts ";
+						if (attacker.waterlevel > 1)
+							deathstring2 = "'s discharge\n";
+						else
+							deathstring2 = "'s shaft\n";
+					}
 					what = "lightning";
 				}
 				bprint (targ.netname);

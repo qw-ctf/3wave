@@ -1,6 +1,6 @@
 Title    : Threewave Capture
-Filename : 3wave30.zip
-Version  : 3.00
+Filename : 3wave32.zip
+Version  : 3.20
 Date     : 96-11-21
 Author   : Dave 'Zoid' Kirsch
 Email    : zoid@threewave.com
@@ -467,6 +467,16 @@ Redundant Message Removal
    Removed redundant messages such as "You got the shells" or "You got the
    armor."  This was just cluttering up the message stream and isn't needed
    since pickups are already signified by a flash and an audio cue.
+
+What's new in 3.20
+------------------
+
+- Flag now appears on the flag carrier.  This looks very cool.
+
+- Expert CTF patch by Chrles Kendrick <zillion@leland.stanford.edu>.  This
+  adds stuff such as capture assists, bonuses for flag and flag carrier
+  defense.  Gives credit to the team members that work together in getting and
+  protecting the flags.
 
 What's new in 3.00
 ------------------

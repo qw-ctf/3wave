@@ -189,6 +189,9 @@ void() worldspawn =
 // player precaches
 	W_Precache ();			// get weapon precaches
 
+// Set up team notices
+	TeamCaptureSetUpdate();
+
 // sounds used from C physics code
 	precache_sound ("demon/dland2.wav");		// landing thud
 	precache_sound ("misc/h2ohit1.wav");		// landing splash

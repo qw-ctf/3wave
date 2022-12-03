@@ -1,7 +1,7 @@
 /* teamplay.qc
 
    From
-        The Comlete Enhanced Teamplay
+        The Complete Enhanced Teamplay
 
    John Spickes -- jspickes@eng.umd.edu
 
@@ -46,6 +46,7 @@ float TEAM_COLOR4       =       -1;
 
 entity team1_lastspawn;
 entity team2_lastspawn;
+float	nextteamupdtime;	// time until next team update
 
 // Teamplay bitfield entries
 
@@ -66,6 +67,46 @@ float TEAM_CAPTURE_RECOVERY_BONUS = 1; // what you get for recovery
 float TEAM_CAPTURE_FLAG_BONUS = 0; // what you get for picking up enemy flag
 float TEAM_CAPTURE_FRAG_CARRIER_BONUS = 2; // what you get for fragging
 	//enemy flag carrier
+float TEAM_CAPTURE_FLAG_RETURN_TIME = 40; // seconds until auto return
+
+// XXX EXPERT CTF Additional scoring system
+
+// bonuses
+
+float TEAM_CAPTURE_CARRIER_DANGER_PROTECT_BONUS = 2; // bonus for fraggin someone
+// who has recently hurt your flag carrier
+float TEAM_CAPTURE_CARRIER_PROTECT_BONUS = 1; // bonus for fraggin someone while
+// either you or your target are near your flag carrier
+float TEAM_CAPTURE_FLAG_DEFENSE_BONUS = 1; // bonus for fraggin someone while
+// either you or your target are near your flag
+float TEAM_CAPTURE_RETURN_FLAG_ASSIST_BONUS = 1; // awarded for returning a flag that causes a
+// capture to happen almost immediately
+float TEAM_CAPTURE_FRAG_CARRIER_ASSIST_BONUS = 2; // award for fragging a flag carrier if a
+// capture happens almost immediately
+
+// radii
+
+float TEAM_CAPTURE_TARGET_PROTECT_RADIUS = 400; // the radius around an object being
+// defended where a target will be worth extra frags
+float TEAM_CAPTURE_ATTACKER_PROTECT_RADIUS = 400; // the radius around an object being
+// defended where an attacker will get extra frags when making kills
+
+// timeouts
+
+float TEAM_CAPTURE_CARRIER_DANGER_PROTECT_TIMEOUT = 4;
+float TEAM_CAPTURE_CARRIER_FLAG_SINCE_TIMEOUT = 2;
+float TEAM_CAPTURE_FRAG_CARRIER_ASSIST_TIMEOUT = 6;
+float TEAM_CAPTURE_RETURN_FLAG_ASSIST_TIMEOUT = 4;
+
+float TEAM_CAPTURE_UPDATE_TIME = 120;
+
+// END EXPERT CTF
+
+// flag status used in cnt field of flag
+float FLAG_AT_BASE = 0;
+float FLAG_CARRIED = 1;
+float FLAG_DROPPED = 2;
+
 
 // Prototypes
 float() W_BestWeapon;
@@ -73,8 +114,6 @@ void() W_SetCurrentAmmo;
 void() bound_other_ammo;
 void(float o, float n) Deathmatch_Weapon;
 void() BackpackTouch;
-//void()	flag_wave1;
-void()	regen_flag;
 
 // Return a name for the color of a team
 string(float Team) GetTeamColor =
@@ -95,6 +134,17 @@ string(float Team) GetTeamColor =
 	else if(Team == 13) return("Yellow");
 	else if(Team == 14) return("Blue");
 	return "Unknown";
+};
+
+// *XXX* EXPERT CTF
+// Just a quickie to return the ASCII-ized team names for CTF
+string(float Team) GetCTFTeam =
+{
+
+	if (Team == (TEAM_COLOR1 + 1)) return "“≈ƒ";
+	if (Team == (TEAM_COLOR2 + 1)) return "¬Ã’≈";
+	return "";
+
 };
 
 
@@ -551,8 +601,7 @@ void() TossBackpack =
 	item = spawn();
 
 	// See if you have the Shotgun or Super Shotgun on
-        if ( (self.weapon == IT_SHOTGUN) || (self.weapon == IT_SUPER_SHOTGUN) )
-	{
+        if ( (self.weapon == IT_SHOTGUN) || (self.weapon == IT_SUPER_SHOTGUN)) {
 		if( self.ammo_shells >= 20 ) {
 			item.ammo_shells = 20;
 			self.ammo_shells = self.ammo_shells - 20;
@@ -565,8 +614,7 @@ void() TossBackpack =
 	}
 
 	// See if you have neither the Shotgun or Super Shotgun
-        if ( !(self.items & IT_SHOTGUN) && !(self.items & IT_SUPER_SHOTGUN) )
-	{
+        if ( !(self.items & IT_SHOTGUN) && !(self.items & IT_SUPER_SHOTGUN)) {
 		if( self.ammo_shells >= 20 ) {
 			item.ammo_shells = 20;
 			self.ammo_shells = self.ammo_shells - 20;
@@ -766,8 +814,8 @@ void() TossWeapon =
 {
 	local entity item;
 
-	if (deathmatch != 2)
-		return;  // only in deathmatch 2
+	if (deathmatch != 1)
+		return;  // only in deathmatch 1
 
 	if((self.weapon == IT_AXE) || (self.weapon == IT_SHOTGUN) ||
 		(self.weapon == IT_HOOK))
@@ -846,60 +894,92 @@ void() TossWeapon =
 	W_SetCurrentAmmo();
 };
 
-void() SilentKill;
-
-void() TeamCaptureRegenFlags =
+void(entity flg) RegenFlag =
 {
-	local entity f;
-
-	self = find(world, classname, "item_flag_team1");
-	if (self != world)
-		regen_flag();
-	self = find(world, classname, "item_flag_team2");
-	if (self != world)
-		regen_flag();
+	flg.movetype = MOVETYPE_TOSS;
+	flg.solid = SOLID_TRIGGER;
+	sound (flg, CHAN_VOICE, "items/itembk2.wav", 1, ATTN_NORM);	// play respawn sound
+	setorigin(flg, flg.oldorigin);
+	flg.angles = flg.mangle;
+	flg.cnt = FLAG_AT_BASE; // it's at home base
+	flg.owner = world;
 };
 
-void() TeamCaptureFlagSanityCheck =
+void(entity flg) TeamCaptureReturnFlag =
 {
 	local entity p;
 
-	// Ok, a flag must be in one of three states
-	// 1. At home base (though we shouldn't be called in that case)
-	// 2. On enemy player
-	// 3. A copy is sitting around somewhere, waiting to be picked up
+	RegenFlag(flg);
 
-	// at home base?
-	if (self.model != string_null) {
-		self.think = TeamCaptureFlagSanityCheck;
-		self.nextthink = time + 30;
-		return; // its at home, no prob
-	}
-
-	// on enemy player?
 	p = find(world, classname, "player");
 	while (p != world) {
-		if ((p.team != self.team) && (p.player_flag & ITEM_ENEMY_FLAG)) {
-			self.think = TeamCaptureFlagSanityCheck;
-			self.nextthink = time + 30;
-			return; // enemy player has it
-		}
+		if (p.team != flg.team)
+			centerprint(p, "Enemy flag has been returned to base!\n");
+		else if (p.team == flg.team)
+			centerprint(p, "Your flag has been returned to base!\n");
 		p = find(p, classname, "player");
 	}
+};
 
-	// copy sitting around somewhere
-	p = find(world, classname, "info_dropped_flag");
-	while (p != world) {
-		if (p.team == self.team) {
-			self.think = TeamCaptureFlagSanityCheck;
-			self.nextthink = time + 30;
-			return; // its out hanging around
-		}
-		p = find(p, classname, "info_dropped_flag");
-	}
-	// didn't find it, oh my
-	// regen this one
-	regen_flag();
+void () TeamCaptureRegenFlags =
+{
+	local entity f;
+
+	f = find(world, classname, "item_flag_team1");
+	if (f != world)
+		RegenFlag(f);
+	f = find(world, classname, "item_flag_team2");
+	if (f != world)
+		RegenFlag(f);
+};
+
+void(entity flg) TeamDropFlag =
+{
+	local entity item, f, oself;
+	local entity p;
+
+	p = flg.owner;
+
+	bprint(p.netname);
+	if (p.lastteam == TEAM_COLOR1 + 1)
+		bprint(" ÏÔÛÙ the ¬Ã’≈ flag!\n"); // blue
+	else
+		bprint(" ÏÔÛÙ the “≈ƒ flag!\n"); // red
+	LogMsg(p, "FLAG-DROP");
+
+	flg.origin = p.origin - '0 0 24';
+	flg.cnt = FLAG_DROPPED;
+	//NOTE! We check lastteam here instead of team--this is because
+	//in the mode where we change colors, we get killed
+	flg.velocity_z = 300;
+	flg.velocity_x = 0;
+	flg.velocity_y = 0;
+	flg.flags = FL_ITEM;
+	flg.solid = SOLID_TRIGGER;
+	flg.movetype = MOVETYPE_TOSS;
+	if (teamplay & TEAM_CAPTURE_CUSTOM)
+		setsize(self, '-16 -16 0', '16 16 74');
+	else
+		setsize(item, '-16 -16 -24', '16 16 32');
+	// return it after so long
+	flg.super_time = time + TEAM_CAPTURE_FLAG_RETURN_TIME;
+};
+
+void(entity player) TeamCaptureDropFlagOfPlayer =
+{
+	local string kn;
+	local entity e;
+
+	if (!(player.player_flag & ITEM_ENEMY_FLAG))
+		return;
+	if (player.lastteam == TEAM_COLOR1 + 1)
+		kn = "item_flag_team2";
+	else
+		kn = "item_flag_team1";
+	player.player_flag = player.player_flag - ITEM_ENEMY_FLAG;
+	e = find(world, classname, kn);
+	if (e != world)
+		TeamDropFlag(e);
 };
 
 void() TeamCaptureFlagTouch =
@@ -917,7 +997,7 @@ void() TeamCaptureFlagTouch =
 	if (self.team == other.team) {
 		// same team, if the flag is *not* at the base, return
 		// it to base.  we overload the 'cnt' field for this
-		if (self.cnt) {
+		if (self.cnt == FLAG_AT_BASE) {
 			// the flag is at home base.  if the player has the enemy
 			// flag, he's just won!
 
@@ -945,14 +1025,32 @@ void() TeamCaptureFlagTouch =
 					self.killed = 0;
 					if (self.team == other.team && self != other)
 						self.frags = self.frags + TEAM_CAPTURE_TEAM_BONUS;
-					if (self.team != other.team)
+					if (self.team != other.team) {
 						centerprint(self, "Your flag was captured!\n");
-					else if (self.team == other.team)
+						// *XXX* EXPERT CTF
+						// reset the last_hurt_carrier variable in all enemy players, so that you don't get
+						// bonuses for defending the flag carrier if the flag carrier has already
+						// completed a capture
+						self.last_hurt_carrier = -5;
+					} else if (self.team == other.team) {
+						// done to all players on the capturing team
 						centerprint(self, "Your team captured the flag!\n");
+
+						// *XXX* EXPERT CTF
+
+						// award extra points for capture assists
+						if (self.last_returned_flag + TEAM_CAPTURE_RETURN_FLAG_ASSIST_TIMEOUT > time) {
+							bprint(self.netname);
+							bprint(" gets an assist for returning his flag!\n");
+							self.frags = self.frags + TEAM_CAPTURE_RETURN_FLAG_ASSIST_BONUS;
+						}
+						if (self.last_fragged_carrier + TEAM_CAPTURE_FRAG_CARRIER_ASSIST_TIMEOUT > time) {
+							bprint(self.netname);
+							bprint(" gets an assist for fragging the flag carrier!\n");
+							self.frags = self.frags + TEAM_CAPTURE_FRAG_CARRIER_ASSIST_BONUS;
+						}
+					}
 					self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
-// ZOID, next line isn't needed, EF_DIMLIGHT is handled by
-// client.qc:CheckDimLight
-//					self.effects = self.effects - (self.effects & EF_DIMLIGHT);
 
 					p = find(p, classname, "player");
 				}
@@ -970,29 +1068,10 @@ void() TeamCaptureFlagTouch =
 			bprint(" ÚÂÙıÚÓÂ‰ the ¬Ã’≈ flag!\n"); // blue
 		LogMsg(other, "FLAG-RECOVERY");
 		other.frags = other.frags + TEAM_CAPTURE_RECOVERY_BONUS;
+		// *XXX* EXPERT CTF set time when player last returned his flag
+		other.last_returned_flag = time;
 		sound (other, CHAN_ITEM, self.noise1, 1, ATTN_NORM);
-		remove(self); // oops it gone
-		p = find(world, classname, "player");
-		while (p != world) {
-			if (p.team != other.team)
-				centerprint(p, "Enemy flag has been returned to base!\n");
-			else if (p.team == other.team)
-				centerprint(p, "Your flag has been returned to base!\n");
-			p = find(p, classname, "player");
-		}
-		if (other.team == TEAM_COLOR1 + 1) {
-			self = find(world, classname, "item_flag_team1");
-			if (self != world)  {
-				self.think = SUB_Null; // its at home, no need to think
-				regen_flag();
-			}
-		} else { // TEAM_COLOR2
-			self = find(world, classname, "item_flag_team2");
-			if (self != world) {
-				self.think = SUB_Null; // its at home, no need to think
-				regen_flag();
-			}
-		}
+		TeamCaptureReturnFlag(self);
 		return;
 	}
 
@@ -1011,21 +1090,15 @@ void() TeamCaptureFlagTouch =
 
 	other.player_flag = other.player_flag + ITEM_ENEMY_FLAG;
 	other.items = other.items | self.items;
-	// turn on the glow
-// ZOID, next line isn't needed, EF_DIMLIGHT is handled by
-// client.qc:CheckDimLight
-//	other.effects = other.effects | EF_DIMLIGHT;
 
-	// make the flag here disappear
-	if (self.cnt) {
-		// home base flags stay
-		self.solid = SOLID_NOT;
-		self.model = string_null;
-		// set up sanity check
-		self.think = TeamCaptureFlagSanityCheck;
-		self.nextthink = time + 30; // 30 seconds pre check
-	} else
-		remove(self); // dropped flags recyclce
+	// *XXX* EXPERT CTF set the time at which the carrier picked up the flag
+	other.flag_since = time;
+
+	// pick up the flag
+	self.cnt = FLAG_CARRIED;
+	self.movetype = MOVETYPE_NOCLIP;
+	self.solid = SOLID_NOT;
+	self.owner = other;
 
 	p = find(world, classname, "player");
 	while (p != world) {
@@ -1039,107 +1112,76 @@ void() TeamCaptureFlagTouch =
 	}
 };
 
-void() TeamCaptureReturnFlag =
+void() TeamCaptureFlagThink =
 {
-	local entity f, p;
+	local entity e;
+	local vector v;
+	local float f;
+	local string s;
 
-	f = world;
-	if (self.team == TEAM_COLOR1 + 1) {
-		f = self;
-		self = find(world, classname, "item_flag_team1");
-		if (self != world) {
-			self.think = SUB_Null; // its at home, no need to think
-			regen_flag();
-		}
-	} else { // TEAM_COLOR2
-		f = self;
-		self = find(world, classname, "item_flag_team2");
-		if (self != world) {
-			self.think = SUB_Null; // its at home, no need to think
-			regen_flag();
-		}
-	}
-	if (f == world)
+	self.nextthink = time + 0.1;
+
+	if (self.cnt == FLAG_AT_BASE)
+		return; // just sitting around waiting to be picked up
+
+	if (self.cnt == FLAG_DROPPED) {
+		if (time - self.super_time > TEAM_CAPTURE_FLAG_RETURN_TIME)
+			TeamCaptureReturnFlag(self);
 		return;
-	p = find(world, classname, "player");
-	while (p != world) {
-		if (p.team != f.team)
-			centerprint(p, "Enemy flag has been returned to base!\n");
-		else if (p.team == f.team)
-			centerprint(p, "Your flag has been returned to base!\n");
-		p = find(p, classname, "player");
 	}
-	remove(f);
-};
 
-void() TeamCaptureDropFlag =
-{
-	local entity item, f, oself;
+	if (self.cnt != FLAG_CARRIED)
+		objerror("Flag in invalid state\n");
 
-	if (!(self.player_flag & ITEM_ENEMY_FLAG))
+	e = self.owner;
+	if ((e.classname != "player") || (e.deadflag) ||
+		(!(e.player_flag & ITEM_ENEMY_FLAG))) {
+		TeamDropFlag(self);
 		return;
-
-	self.player_flag = self.player_flag - ITEM_ENEMY_FLAG;
-
-	bprint(self.netname);
-	if (self.lastteam == TEAM_COLOR1 + 1)
-		bprint(" ÏÔÛÙ the ¬Ã’≈ flag!\n"); // blue
-	else
-		bprint(" ÏÔÛÙ the “≈ƒ flag!\n"); // red
-	LogMsg(self, "FLAG-DROP");
-
-	item = spawn();
-	item.items = self.items & (IT_KEY1 | IT_KEY2);
-	item.origin = self.origin - '0 0 24';
-	item.cnt = 0; // it's NOT at home base
-	//NOTE! We check lastteam here instead of team--this is because
-	//in the mode where we change colors, we get killed
-	if (self.lastteam == TEAM_COLOR1 + 1) {
-		item.classname = "info_dropped_flag";
-		item.team = TEAM_COLOR2 + 1;
-		f = find(world, classname, "item_flag_team2");
-		if (f != world) {
-			setmodel(item, f.mdl);
-			item.skin = f.skin;
-			item.noise = f.noise;
-			item.noise1 = f.noise1;
-		} else {
-			setmodel(item, "progs/lavaball.mdl");
-			item.noise = "";
-		}
-	} else { // TEAM_COLOR2
-		item.classname = "info_dropped_flag";
-		item.team = TEAM_COLOR1 + 1;
-		f = find(world, classname, "item_flag_team1");
-		if (f != world) {
-			setmodel(item, f.mdl);
-			item.skin = f.skin;
-			item.noise = f.noise;
-			item.noise1 = f.noise1;
-		} else {
-			setmodel(item, "progs/lavaball.mdl");
-			item.noise = "";
-		}
 	}
-	item.velocity_z = 300;
-	item.velocity_x = 0;
-	item.velocity_y = 0;
-	item.touch = TeamCaptureFlagTouch;
-	item.flags = FL_ITEM;
-	item.solid = SOLID_TRIGGER;
-	item.movetype = MOVETYPE_TOSS;
-	if (teamplay & TEAM_CAPTURE_CUSTOM)
-		setsize(self, '-16 -16 0', '16 16 74');
-	else
-		setsize(item, '-16 -16 -24', '16 16 32');
-	item.effects = item.effects | EF_DIMLIGHT; // make it glow
-	oself = self;
-	self = item;
-//	flag_wave1(); // make it wave
-	self = oself;
-	// return the flag to base if no one picks it up for a while
-	item.think = TeamCaptureReturnFlag;
-	item.nextthink = time + 30;
+	makevectors (e.angles);
+	v = v_forward;
+//dprint("fwd: ");
+//s = vtos(v);
+//dprint(s);
+//dprint("\n");
+//	if (v_z < 0) {
+//		v_z = (-1)*v_z;
+//		v = v + v * 1.2 * v_z;
+//	}
+//dprint("adj: ");
+//s = vtos(v);
+//dprint(s);
+//dprint("\n");
+	v_z = (-1) * v_z; // reverse z component
+
+	f = 14;
+	if (self.owner.frame >= 29 && self.owner.frame <= 40) {
+		if (self.owner.frame >= 29 && self.owner.frame <= 34) { //axpain
+			if      (self.owner.frame == 29) f = f + 2;
+			else if (self.owner.frame == 30) f = f + 8;
+			else if (self.owner.frame == 31) f = f + 12;
+			else if (self.owner.frame == 32) f = f + 11;
+			else if (self.owner.frame == 33) f = f + 10;
+			else if (self.owner.frame == 34) f = f + 4;
+		} else if (self.owner.frame >= 35 && self.owner.frame <= 40) { // pain
+			if      (self.owner.frame == 35) f = f + 2;
+			else if (self.owner.frame == 36) f = f + 10;
+			else if (self.owner.frame == 37) f = f + 10;
+			else if (self.owner.frame == 38) f = f + 8;
+			else if (self.owner.frame == 39) f = f + 4;
+			else if (self.owner.frame == 40) f = f + 2;
+		}
+	} else if (self.owner.frame >= 103 && self.owner.frame <= 118) {
+		if      (self.owner.frame >= 103 && self.owner.frame <= 104) f = f + 6;  //nailattack
+		else if (self.owner.frame >= 105 && self.owner.frame <= 106) f = f + 6;  //light
+		else if (self.owner.frame >= 107 && self.owner.frame <= 112) f = f + 7;  //rocketattack
+		else if (self.owner.frame >= 112 && self.owner.frame <= 118) f = f + 7;  //shotattack
+	}
+	self.origin = e.origin + '0 0 -16' - f*v + v_right * 22;
+	self.angles = e.angles + '0 0 -45';
+	setorigin (self, self.origin);
+	self.nextthink = time + 0.01;
 };
 
 // self is player
@@ -1163,62 +1205,6 @@ entity() TeamCaptureSpawn =
 	return world;
 };
 
-// ZOID -- total up team scores and set everyone's frag count to the team
-// total
-void() TeamScores =
-{
-	local float team1, team2, team3, team4;
-	local entity p;
-
-	if (teamscored || !teamplay)
-		return; // already scored or not in team mode
-
-	teamscored = 1;
-
-	team1 = 0;
-	team2 = 0;
-	team3 = 0;
-	team4 = 0;
-
-dprint("TeamScores()\n");
-	p = find(world, classname, "player");
-	while (p != world) {
-dprint("  Player=");
-dprint(p.netname);
-dprint(" Team=");
-dprint(ftos(p.team));
-dprint(" Frags=");
-dprint(ftos(p.frags));
-dprint("\n");
-		if (p.team == TEAM_COLOR1 + 1)
-			team1 = team1 + p.frags;
-		else if (p.team == TEAM_COLOR2 + 1)
-			team2 = team2 + p.frags;
-		else if (p.team == TEAM_COLOR3 + 1)
-			team3 = team3 + p.frags;
-		else if (p.team == TEAM_COLOR4 + 1)
-			team4 = team4 + p.frags;
-		p = find(p, classname, "player");
-	}
-dprint(" Totals: team1=");
-dprint(ftos(team1));
-dprint(" team2=");
-dprint(ftos(team2));
-dprint("\n");
-	p = find(world, classname, "player");
-	while (p != world) {
-		if (p.team == TEAM_COLOR1 + 1)
-			p.frags = team1;
-		else if (p.team == TEAM_COLOR2 + 1)
-			p.frags = team2;
-		else if (p.team == TEAM_COLOR3 + 1)
-			p.frags = team3;
-		else if (p.team == TEAM_COLOR4 + 1)
-			p.frags = team4;
-		p = find(p, classname, "player");
-	}
-};
-
 /*
 	From byron@caseware.com Wed Oct 16 18:57:44 1996
 	Date: Wed, 16 Oct 1996 21:22:37 -0400
@@ -1238,7 +1224,7 @@ dprint("\n");
 // *Capture The Flag - Status report by Wonko
 void() TeamFlagStatusReport =
 {
-	local entity flag1, flag2, thief1, thief2, p;
+	local entity flag1, flag2, p;
 
 	if (!(teamplay & TEAM_CAPTURE_FLAG)) {
 		sprint(self, "Capture the Flag is not enabled.\n");
@@ -1249,23 +1235,6 @@ void() TeamFlagStatusReport =
 	flag1 = find (world,classname, "item_flag_team1");
 	flag2 = find (world,classname, "item_flag_team2");
 
-	// Find whether they are superceded by dropped flags
-	if (flag1 != world && flag2 != world &&
-		(flag1.model == string_null || flag2.model == string_null)) {
-		p = find(world, classname, "info_dropped_flag");
-		while (p != world) {
-			if (p.team == TEAM_COLOR1 + 1) {
-				if (flag1.model == string_null)
-					flag1 = p;
-			}
-			else {
-				if (flag2.model == string_null)
-					flag2 = p;
-			}
-			p = find(p, classname, "info_dropped_flag");
-		}
-	}
-
 	// If on team 2 switch meanings of flags
 	if (self.team != TEAM_COLOR1 + 1) {
 		p = flag1;
@@ -1273,55 +1242,180 @@ void() TeamFlagStatusReport =
 		flag2 = p;
 	}
 
-	// Find if a player is carrying the flag(s)
-	thief1 = world;
-	thief2 = world;
+	if (flag1 != world && flag1.cnt == FLAG_CARRIED) {
+		sprint(self, flag1.owner.netname);
+		sprint(self, " has your flag. ");
+	} else {
+		sprint(self, "Your flag is ");
+		if (flag1 == world)
+			sprint(self, "missing! ");
+		if (flag1.cnt == FLAG_AT_BASE)
+			sprint(self, "in your base. ");
+		else if (flag1.cnt == FLAG_DROPPED)
+			sprint(self, "lying about. ");
+		else
+			sprint(self, " corrupt. ");
+	}
 
+	if (flag2 != world && flag2.cnt == FLAG_CARRIED) {
+		if (self == flag2.owner)
+			sprint(self, "You have the enemy flag.\n");
+		else {
+			sprint(self, flag2.owner.netname);
+			sprint(self, " has the enemy flag.\n");
+		}
+	} else {
+		sprint(self, "The enemy is ");
+		if (flag2 == world)
+			sprint(self, "missing!\n");
+		if (flag2.cnt == FLAG_AT_BASE)
+			sprint(self, "in their base.\n");
+		else if (flag2.cnt == FLAG_DROPPED)
+			sprint(self, "lying about.\n");
+		else
+			sprint(self, " corrupt.\n");
+	}
+};
+
+/////////////////////////////////////////////////////////////////////////
+
+$cd id1/models/flag
+$base base
+$skin skin
+
+void() place_flag = {
+	self.mdl = self.model;		// so it can be restored on respawn
+	self.flags = FL_ITEM;		// make extra wide
+	self.solid = SOLID_TRIGGER;
+	self.movetype = MOVETYPE_TOSS;
+	self.velocity = '0 0 0';
+	self.origin_z = self.origin_z + 6;
+	self.think = TeamCaptureFlagThink;
+	self.touch = TeamCaptureFlagTouch;
+	self.nextthink = time + 0.1;
+	self.cnt = FLAG_AT_BASE;
+	self.mangle = self.angles;
+	self.effects = self.effects | EF_DIMLIGHT;
+	if (!droptofloor()) {
+		dprint ("Flag fell out of level at ");
+		dprint (vtos(self.origin));
+		dprint ("\n");
+		remove(self);
+		return;
+	}
+	self.oldorigin = self.origin; // save for flag return
+};
+
+// ZOID Capture the flag
+void() item_flag_team1 =
+{
+	if (!deathmatch || !(cvar("teamplay") & TEAM_CAPTURE_FLAG)) {
+		remove(self);
+		return;
+	}
+
+	self.team = TEAM_COLOR1 + 1;
+	self.items = IT_KEY2;
+	if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM) {
+		precache_model ("progs/flag.mdl");
+		setmodel (self, "progs/flag.mdl");
+		self.skin = 0;
+		precache_sound ("misc/flagtk.wav");			// flag taken
+		precache_sound ("misc/flagcap.wav");			// flag capture
+		precache_sound ("doors/runetry.wav");
+		self.noise = "misc/flagtk.wav";
+		self.noise1 = "doors/runetry.wav";
+		setsize(self, '-16 -16 0', '16 16 74');
+	} else {
+		precache_model ("progs/w_g_key.mdl");
+		setmodel (self, "progs/w_g_key.mdl");
+		precache_sound ("misc/medkey.wav");
+		precache_sound ("doors/meduse.wav");
+		precache_sound ("doors/runetry.wav");
+		self.noise = "misc/medkey.wav";
+		self.noise1 = "doors/runetry.wav";
+		setsize(self, '-16 -16 -24', '16 16 32');
+	}
+	self.nextthink = time + 0.2;	// items start after other solids
+	self.think = place_flag;
+};
+
+void() item_flag_team2 =
+{
+	if (!deathmatch || !(cvar("teamplay") & TEAM_CAPTURE_FLAG)) {
+		remove(self);
+		return;
+	}
+
+	self.team = TEAM_COLOR2 + 1;
+	self.items = IT_KEY1;
+	if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM) {
+		precache_model ("progs/flag.mdl");
+		setmodel (self, "progs/flag.mdl");
+		self.skin = 1;
+		precache_sound ("misc/flagtk.wav");			// flag taken
+		precache_sound ("misc/flagcap.wav");			// flag capture
+		precache_sound ("doors/runetry.wav");
+		self.noise = "misc/flagtk.wav";
+		self.noise1 = "doors/runetry.wav";
+		setsize(self, '-16 -16 0', '16 16 74');
+	} else {
+		precache_model ("progs/w_s_key.mdl");
+		setmodel (self, "progs/w_s_key.mdl");
+		precache_sound ("misc/medkey.wav");
+		precache_sound ("doors/meduse.wav");
+		precache_sound ("doors/runetry.wav");
+		self.noise = "misc/medkey.wav";
+		self.noise1 = "doors/runetry.wav";
+		setsize(self, '-16 -16 -24', '16 16 32');
+	}
+	// make it glow
+	self.nextthink = time + 0.2;	// items start after other solids
+	self.think = place_flag;
+};
+
+void() TeamCaptureSetUpdate =
+{
+	nextteamupdtime = time + TEAM_CAPTURE_UPDATE_TIME;
+};
+
+void() TeamCaptureCheckUpdate =
+{
+	local float total1, total2;
+	local entity p;
+	local string s;
+
+	if (nextteamupdtime > time || !(teamplay & TEAM_CAPTURE_FLAG))
+		return;
+
+	TeamCaptureSetUpdate();
+
+	// count up total
+	total1 = total2 = 0;
 	p = find(world, classname, "player");
 	while (p != world) {
-		if ((p.player_flag & ITEM_ENEMY_FLAG)) {
-			if (p.team == self.team)
-				thief2 = p;
-			else
-				thief1 = p;
-		}
+		if (p.lastteam == TEAM_COLOR1 + 1)
+			total1 = total1 + p.frags;
+		else if (p.lastteam == TEAM_COLOR2 + 1)
+			total2 = total2 + p.frags;
 		p = find(p, classname, "player");
 	}
 
-	// Player's team flag status
-	if (thief1 == world) {
-		sprint(self, "Your flag is ");
-		if (flag2 == world)
-			sprint (self, " missing! ");
-		else {
-			if (flag1.cnt)
-				sprint(self, "in your base. ");
-			else
-				sprint(self, "lying about. ");
-		}
+	if (total1 > total2) {
+		bprint("“≈ƒ team is leading by ");
+		s = ftos(total1 - total2);
+		bprint(s);
+		bprint(" points!\n");
+	} else if (total1 < total2) {
+		bprint("¬Ã’≈ team is leading by ");
+		s = ftos(total2 - total1);
+		bprint(s);
+		bprint(" points!\n");
 	} else {
-		sprint (self, thief1.netname);
-		sprint (self, " has your flag. ");
-	}
-
-	// Enemy team flag status
-	if (thief2 == world) {
-		sprint(self, "The enemy flag is ");
-		if (flag2 == world)
-			sprint (self, "missing!\n");
-		else {
-			if (flag2.cnt)
-				sprint(self, "in their base.\n");
-			else
-				sprint(self, "lying about.\n");
-		}
-	} else {
-		if (self == thief2)
-			sprint(self, "You have the enemy flag.\n");
-		else {
-			sprint (self, thief2.netname);
-			sprint (self, " has the enemy flag.\n");
-		}
+		bprint("¬Ã’≈ and “≈ƒ team are tied with ");
+		s = ftos(total1);
+		bprint(s);
+		bprint(" points!\n");
 	}
 };
 

@@ -127,12 +127,12 @@ void() CheckAdminCmd =
 
 		if (p != world) {
 			centerprint(p, "YOU HAVE SWITCHED TEAMS!");
-			if (self.lastteam == TEAM_COLOR1 + 1) {
+			if (p.lastteam == TEAM_COLOR1 + 1) {
 				p.team = p.lastteam = TEAM_COLOR2 + 1;
 				s = ftos(TEAM_COLOR2);
 			} else {
-				s = ftos(TEAM_COLOR1);
 				p.team = p.lastteam = TEAM_COLOR1 + 1;
+				s = ftos(TEAM_COLOR1);
 			}
 			stuffcmd(p, "color ");
 			stuffcmd(p, s);

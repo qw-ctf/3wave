@@ -1,4 +1,3 @@
-
 /*
 ==============================================================================
 
@@ -467,6 +466,17 @@ float	AS_MISSILE		= 4;
 // *TEAMPLAY*
 
 .float          lastteam;       // The last team this player was a member of.
+
+// *XXX* EXPERT CTF ALTERNATE SCORING
+
+// time values
+
+.float 		flag_since; 		// how long a player has had the flag
+.float		last_returned_flag; 	// last time player returned his own flag
+.float		last_fragged_carrier; 	// last time player fragged a flag carrier
+.float		last_hurt_carrier; 	// last time player hurt the flag carrier
+
+// *XXX* end
 
 .float		walkframe;
 
