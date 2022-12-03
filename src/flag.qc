@@ -5,13 +5,13 @@ $base base
 $skin skin
 $frame flagw1 flagw2 flagw3 flagw4 flagw5 flagw6 flagw7
 
-void()	flag_wave1	=[	$flagw1,	flag_wave2	] {};
-void()	flag_wave2	=[	$flagw2,	flag_wave3	] {};
-void()	flag_wave3	=[	$flagw3,	flag_wave4	] {};
-void()	flag_wave4	=[	$flagw4,	flag_wave5	] {};
-void()	flag_wave5	=[	$flagw5,	flag_wave6	] {};
-void()	flag_wave6	=[	$flagw6,	flag_wave7	] {};
-void()	flag_wave7	=[	$flagw7,	flag_wave1	] {};
+//void()	flag_wave1	=[	$flagw1,	flag_wave2	] {};
+//void()	flag_wave2	=[	$flagw2,	flag_wave3	] {};
+//void()	flag_wave3	=[	$flagw3,	flag_wave4	] {};
+//void()	flag_wave4	=[	$flagw4,	flag_wave5	] {};
+//void()	flag_wave5	=[	$flagw5,	flag_wave6	] {};
+//void()	flag_wave6	=[	$flagw6,	flag_wave7	] {};
+//void()	flag_wave7	=[	$flagw7,	flag_wave1	] {};
 
 void() place_flag = {
 	self.mdl = self.model;		// so it can be restored on respawn
@@ -27,8 +27,7 @@ void() place_flag = {
 		remove(self);
 		return;
 	}
-	if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM)
-		flag_wave1(); //make it wave
+//	flag_wave1(); //make it wave
 };
 
 void() regen_flag = {
@@ -36,7 +35,7 @@ void() regen_flag = {
 	self.solid = SOLID_TRIGGER;
 	sound (self, CHAN_VOICE, "items/itembk2.wav", 1, ATTN_NORM);	// play respawn sound
 	setorigin (self, self.origin);
-	flag_wave1();
+//	flag_wave1();
 };
 
 // ZOID Capture the flag
@@ -57,14 +56,18 @@ void() item_flag_team1 =
 		self.skin = 0;
 		precache_sound ("misc/flagtk.wav");			// flag taken
 		precache_sound ("misc/flagcap.wav");			// flag capture
+		precache_sound ("doors/runetry.wav");
 		self.noise = "misc/flagtk.wav";
-		setsize(self, '-8 -8 -8', '16 16 32');
+		self.noise1 = "doors/runetry.wav";
+		setsize(self, '-16 -16 0', '16 16 74');
 	} else {
 		precache_model ("progs/w_g_key.mdl");
 		setmodel (self, "progs/w_g_key.mdl");
 		precache_sound ("misc/medkey.wav");
 		precache_sound ("doors/meduse.wav");
+		precache_sound ("doors/runetry.wav");
 		self.noise = "misc/medkey.wav";
+		self.noise1 = "doors/runetry.wav";
 		setsize(self, '-16 -16 -24', '16 16 32');
 	}
 
@@ -91,14 +94,18 @@ void() item_flag_team2 =
 		self.skin = 1;
 		precache_sound ("misc/flagtk.wav");			// flag taken
 		precache_sound ("misc/flagcap.wav");			// flag capture
+		precache_sound ("doors/runetry.wav");
 		self.noise = "misc/flagtk.wav";
-		setsize(self, '-8 -8 -8', '16 16 32');
+		self.noise1 = "doors/runetry.wav";
+		setsize(self, '-16 -16 0', '16 16 74');
 	} else {
 		precache_model ("progs/w_s_key.mdl");
 		setmodel (self, "progs/w_s_key.mdl");
 		precache_sound ("misc/medkey.wav");
 		precache_sound ("doors/meduse.wav");
+		precache_sound ("doors/runetry.wav");
 		self.noise = "misc/medkey.wav";
+		self.noise1 = "doors/runetry.wav";
 		setsize(self, '-16 -16 -24', '16 16 32');
 	}
 	// make it glow

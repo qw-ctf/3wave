@@ -17,19 +17,22 @@ void() MOTD =
 		self.motd_count = self.motd_count + 1;
 		if (teamplay & TEAM_CAPTURE_FLAG)
 			if (self.team == TEAM_COLOR1 + 1)
-				centerprint(self, "Welcome to Quake.ThreeWave.COM\nYour admin is Zoid.\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
+				centerprint(self, "Welcome!\nRunning ThreeWave CTF 3.0\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
 			else
-				centerprint(self, "Welcome to Quake.ThreeWave.COM\nYour admin is Zoid.\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
+				centerprint(self, "Welcome!\nRunning Threewave CTF 3.0\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
 		else if (teamplay)
-			centerprint(self, "Welcome to Quake.ThreeWave.COM\nYour admin is Zoid.\n\nTEAMPLAY IS ACTIVE");
+			centerprint(self, "Welcome!\nRunning Threewave CTF 3.0\n\nTEAMPLAY IS ACTIVE");
 		else
-			centerprint(self, "Welcome to Quake.ThreeWave.COM\nYour admin is Zoid.");
+			centerprint(self, "Welcome!\nRunning ThreeWave Server Mods");
 		return;
 	} else {
 		sprint(self, "Info: http://quake.threewave.com/\n");
 		if (teamplay & TEAM_CAPTURE_FLAG) {
-			sprint(self, "You are playing цаптуре тхе флаг!\n"); // CAPTURE THE FLAG
-			sprint(self, "  Version 2.5\n");
+			if (teamplay & TEAM_CAPTURE_CUSTOM)
+				sprint(self, "You are playing\nCUSTOM цаптуре тхе флаг!\n"); // CAPTURE THE FLAG
+			else
+				sprint(self, "You are playing\nцаптуре тхе флаг!\n"); // CAPTURE THE FLAG
+			sprint(self, "  Version 3.0\n");
 		}
 	}
 	self.motd_time = 0;
@@ -139,10 +142,7 @@ void() DecodeLevelParms =
 	self.player_flag = self.player_flag | parm16;
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_RUNE_MASK);
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
-	if (teamplay == 0)
-		self.skin = (self.player_flag & 65280)/256;
-	else
-		self.skin = 0; // default to the Quake dude
+	self.skin = (self.player_flag & 65280)/256;
 
 	if (serverflags)
 	{
@@ -605,6 +605,7 @@ void() PutClientInServer =
 	modelindex_eyes = self.modelindex;
 
 	setmodel (self, "progs/player.mdl");
+
 	modelindex_player = self.modelindex;
 
 	setsize (self, VEC_HULL_MIN, VEC_HULL_MAX);
@@ -620,40 +621,6 @@ void() PutClientInServer =
 	}
 
 	spawn_tdeath (self.origin, self);
-
-// *********************************************************************
-// **								          **
-// ** M U L T I S K I N  1.1  (start)                                  **
-// **									  **
-// ***********************************************************************
-
-	if (teamplay == 0) {
-		if (self.skin == 0) centerprint(self, "Mr. Quake himself!"); else
-		if (self.skin == 1) centerprint(self, "No time to play with yourself here!"); else
-		if (self.skin == 2) centerprint(self, "You're one pretty toad!"); else
-		if (self.skin == 3) centerprint(self, "Wow Stormtrooper, you're though!"); else
-		if (self.skin == 4) centerprint(self, "Hi Max, looking yellow/blue today!"); else
-		if (self.skin == 5) centerprint(self, "You are back!"); else
-		if (self.skin == 6) centerprint(self, "Judge Dredd! Let's restore some order!"); else
-		if (self.skin == 7) centerprint(self, "Camo! Can't see you, where are you!"); else
-		if (self.skin == 8) centerprint(self, "Okay Captain Picard, make it so!"); else
-		if (self.skin == 9) centerprint(self, "Whizz whizz.. Wizzard!"); else
-		if (self.skin == 10) centerprint(self,"I'm the Predator, you're the prey!"); else
-		if (self.skin == 11) centerprint(self,"Welcome Skeleton, looking good!"); else
-		if (self.skin == 12) centerprint(self,"Wan-Fu, whoever you are :)"); else
-		if (self.skin == 13) centerprint(self,"Oh no, it's Henry Rollins!"); else
-		if (self.skin == 14) centerprint(self,"Ooh no, it's She.. eh.. He-Man"); else
-		if (self.skin == 15) centerprint(self,"If it isn't Boba, go get Han Solo!"); else
-		if (self.skin == 16) centerprint(self,"It's SUPERMAN!"); else
-		if (self.skin == 17) centerprint(self,"Protect the innocent, uphold your law"); else
-		if (self.skin == 18) centerprint(self,"Why is that symbol on your suit?");
-	}
-
-// *************************************************************************
-// **								          **
-// ** M U L T I S K I N  1.1  (end)                                       **
-// **									  **
-// *************************************************************************
 };
 
 
@@ -798,30 +765,85 @@ void() NextLevel =
 };
 
 // Return a new random level, that doesn't match old
+
+// Rewriten for CTF
+// uses the server temp1 cvar for level tracking
+// temp1 is mapped out as:
+//  bit 16 to 12 for id level num 0xf800, 63488
+//  bit 11 to 7 for Custom level num 0x0f80, 3968
+//  bit 6 to 0 for percent of custom CTF levels 0x007f, 127
+// server ops should just set temp1 to the percent and the start id/ctf
+// levels will be zero (first level)
+// 1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536
+// ---------------- --------------------- ---------------------------
+// x x x x  x  x  x
+//                  x   x   x   x    x
+//                                        x    x    x     x     x
+//
 string(string old) RandomLevel =
 {
 local float r;
+local float idlvl, ctflvl;
+local float percent;
+local string smap;
+local string s;
 
 	r = random();
 	if (teamplay & TEAM_CAPTURE_FLAG) {
-		// capture levels
-		if (old == "e1m1") return "e1m2";
-		if (old == "e1m2") return "e1m3";
-		if (old == "e1m3") return "e1m4";
-		if (old == "e1m4") return "e1m5";
-		if (old == "e1m5") return "e1m6";
-		if (old == "e1m6") return "e1m8";
-		if (old == "e1m8") return "e2m1";
-		if (old == "e2m1") return "e2m2";
-		if (old == "e2m2") return "e2m3";
-		if (old == "e2m3") return "e2m5";
-		if (old == "e2m5") return "e4m3";
-		if (old == "e4m3") return "e4m4";
-		if (old == "e4m4") return "e4m5";
-		if (old == "e4m5") return "e4m6";
-		if (old == "e4m6") return "dm3";
-		if (old == "dm3") return "dm6";
-		return "e1m1";
+		// extract stuff from temp1
+		percent = cvar("temp1") & 127;
+		idlvl = (cvar("temp1") & 3968) / 128;
+		ctflvl = (cvar("temp1") & 126976) / 4096;
+dprint("RandomLevel:()\n");
+dprint("  percent=");
+dprint(ftos(percent));
+dprint("  idlvl=");
+dprint(ftos(idlvl));
+dprint("  ctflvl=");
+dprint(ftos(ctflvl));
+dprint("\n");
+
+		if ((random() < percent / 100.0) && (teamplay & TEAM_CAPTURE_CUSTOM)) {
+			ctflvl = ctflvl + 1;
+			if (ctflvl == 1) smap = "ctf2";
+			else if (ctflvl == 2) smap = "ctf3";
+			else if (ctflvl == 3) smap = "ctf4";
+			else if (ctflvl == 4) smap = "ctf5";
+			else if (ctflvl == 5) smap = "ctf6";
+			else if (ctflvl == 6) smap = "ctf7";
+			else if (ctflvl == 7) smap = "ctf8";
+			else {
+				smap = "ctf1";
+				ctflvl = 0;
+			}
+		} else {
+			// capture levels
+			idlvl = idlvl + 1;
+			if (idlvl == 1) smap = "e1m2";
+			else if (idlvl == 2) smap = "e1m3";
+			else if (idlvl == 3) smap = "e1m4";
+			else if (idlvl == 4) smap = "e1m5";
+			else if (idlvl == 5) smap = "e1m6";
+			else if (idlvl == 6) smap = "e1m8";
+			else if (idlvl == 7) smap = "e2m1";
+			else if (idlvl == 8) smap = "e2m2";
+			else if (idlvl == 9) smap = "e2m3";
+			else if (idlvl == 10) smap = "e2m5";
+			else if (idlvl == 11) smap = "e4m3";
+			else if (idlvl == 12) smap = "e4m4";
+			else if (idlvl == 13) smap = "e4m5";
+			else if (idlvl == 14) smap = "e4m6";
+			else if (idlvl == 15) smap = "dm3";
+			else if (idlvl == 16) smap = "dm6";
+			else {
+				smap = "e1m1";
+				idlvl = 0;
+			}
+		}
+		// recombine the cvar
+		s = ftos(ctflvl * 4096 + idlvl * 128 + percent);
+		cvar_set("temp1", s);
+		return smap;
 	}
 	if (r > 0.8) {
 		r = random() * 7;
@@ -1426,7 +1448,18 @@ void() ClientConnect =
 		TeamCheckLock();
         if(teamplay & TEAM_LOCK_COLORS) // force a stuff cmd in think
 			self.player_flag = self.player_flag | TEAM_STUFF_COLOR;
+		if ((teamplay & TEAM_CAPTURE_CUSTOM) && (teamplay & TEAM_CAPTURE_FLAG)) {
+			if (self.lastteam == TEAM_COLOR1 + 1)
+				self.skin = 1;
+			else
+				self.skin = 3;
+			if (random() < 0.5)
+				self.skin = self.skin + 1; // visor dude
+			self.player_flag = self.player_flag - (self.player_flag & 65280);
+			self.player_flag = self.player_flag | (self.skin * 256);
+		}
 	}
+
 
 // a client connecting during an intermission can cause problems
 	if (intermission_running)

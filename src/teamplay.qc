@@ -73,7 +73,7 @@ void() W_SetCurrentAmmo;
 void() bound_other_ammo;
 void(float o, float n) Deathmatch_Weapon;
 void() BackpackTouch;
-void()	flag_wave1;
+//void()	flag_wave1;
 void()	regen_flag;
 
 // Return a name for the color of a team
@@ -766,6 +766,9 @@ void() TossWeapon =
 {
 	local entity item;
 
+	if (deathmatch != 2)
+		return;  // only in deathmatch 2
+
 	if((self.weapon == IT_AXE) || (self.weapon == IT_SHOTGUN) ||
 		(self.weapon == IT_HOOK))
 		return;
@@ -927,7 +930,7 @@ void() TeamCaptureFlagTouch =
 				LogMsg(other, "FLAG-CAPTURE");
 				other.items = other.items - (other.items & (IT_KEY1 | IT_KEY2));
 
-				if (teamplay & TEAM_CAPTURE_CUSTOM)
+				if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM)
 					sound (other, CHAN_VOICE, "misc/flagcap.wav", 1, ATTN_NONE);
 				else
 					sound (other, CHAN_VOICE, "doors/meduse.wav", 1, ATTN_NONE);
@@ -967,7 +970,7 @@ void() TeamCaptureFlagTouch =
 			bprint(" ÚÂÙıÚÓÂ‰ the ¬Ã’≈ flag!\n"); // blue
 		LogMsg(other, "FLAG-RECOVERY");
 		other.frags = other.frags + TEAM_CAPTURE_RECOVERY_BONUS;
-		sound (other, CHAN_ITEM, self.noise, 1, ATTN_NORM);
+		sound (other, CHAN_ITEM, self.noise1, 1, ATTN_NORM);
 		remove(self); // oops it gone
 		p = find(world, classname, "player");
 		while (p != world) {
@@ -1099,6 +1102,7 @@ void() TeamCaptureDropFlag =
 			setmodel(item, f.mdl);
 			item.skin = f.skin;
 			item.noise = f.noise;
+			item.noise1 = f.noise1;
 		} else {
 			setmodel(item, "progs/lavaball.mdl");
 			item.noise = "";
@@ -1111,6 +1115,7 @@ void() TeamCaptureDropFlag =
 			setmodel(item, f.mdl);
 			item.skin = f.skin;
 			item.noise = f.noise;
+			item.noise1 = f.noise1;
 		} else {
 			setmodel(item, "progs/lavaball.mdl");
 			item.noise = "";
@@ -1124,14 +1129,13 @@ void() TeamCaptureDropFlag =
 	item.solid = SOLID_TRIGGER;
 	item.movetype = MOVETYPE_TOSS;
 	if (teamplay & TEAM_CAPTURE_CUSTOM)
-		setsize(item, '-8 -8 -8', '16 16 32');
+		setsize(self, '-16 -16 0', '16 16 74');
 	else
 		setsize(item, '-16 -16 -24', '16 16 32');
 	item.effects = item.effects | EF_DIMLIGHT; // make it glow
 	oself = self;
 	self = item;
-	if (teamplay & TEAM_CAPTURE_CUSTOM)
-		flag_wave1(); // make it wave
+//	flag_wave1(); // make it wave
 	self = oself;
 	// return the flag to base if no one picks it up for a while
 	item.think = TeamCaptureReturnFlag;
