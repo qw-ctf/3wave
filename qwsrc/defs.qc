@@ -516,6 +516,10 @@ float	AS_MISSILE		= 4;
 
 .float		walkframe;
 
+// Zoid Additions
+.float		maxspeed;		// Used to set Maxspeed on a player
+.float		gravity;		// Gravity Multiplier (0 to 1.0)
+
 .float 		attack_finished;
 .float		pain_finished;
 

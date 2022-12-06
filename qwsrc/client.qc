@@ -509,6 +509,7 @@ called each time a player enters a new level
 void() PutClientInServer =
 {
 	local	entity spot;
+	local	float spd;
 
 	serverflags = 0; // make sure
 
@@ -546,6 +547,10 @@ void() PutClientInServer =
 	self.attack_finished = time;
 	self.th_pain = player_pain;
 	self.th_die = PlayerDie;
+
+	spd = cvar("sv_maxspeed");
+	if (self.maxspeed != spd)
+		self.maxspeed = spd;
 
 	self.deadflag = DEAD_NO;
 // paustime is set by teleporters to keep the player from moving a while

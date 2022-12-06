@@ -1496,6 +1496,7 @@ void() RuneTouch =
 			bprint(PRINT_LOW, " got the rune of Èולל Íבחיד!\n");
 		}
 		TeamPlayerUpdate(other, "Èולל Íבחיד!    Èבףפו");
+		other.maxspeed = other.maxspeed * 1.25;
 	}
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
 		self.items = self.items | IT_SIGIL4;

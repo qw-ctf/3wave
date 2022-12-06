@@ -1092,12 +1092,14 @@ void() W_ChangeWeapon =
 			fl = IT_AXE;
 	} else if (self.impulse == 22) {
 		fl = IT_GRAPPLE;
-		sprint (self, PRINT_HIGH , "Grappling Hook Selected\n");
-		if (self.hook_out)
-			sound (self, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
+		if (self.weapon != IT_GRAPPLE) {
+			sprint (self, PRINT_HIGH , "Grappling Hook Selected\n");
+			if (self.hook_out)
+				sound (self, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
 
-		self.hook_out = FALSE;
-		self.on_hook = FALSE;
+			self.hook_out = FALSE;
+			self.on_hook = FALSE;
+		}
 	} else if (self.impulse == 31) {
 		fl = IT_AXE;
 	} else if (self.impulse == 2 || self.impulse == 32) {

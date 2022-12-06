@@ -27,6 +27,11 @@ float	nextteamupdtime;	// time until next team update
 float last_flag_capture;	// time of last capture
 float last_capture_team;	// last team that captured
 
+float teamscr1;			// team 1's teamscr score
+float teamscr2;			// team 2's teamscr score
+float lastteamscrtime;		// last time we calculated it
+float TEAMSCRTIME = 1;
+
 // Teamplay bitfield entries
 
 float TEAM_HEALTH_PROTECT =     1;      // No health damage from friendly fire
@@ -1042,6 +1047,72 @@ void(entity player) TeamCaptureDropFlagOfPlayer =
 		TeamDropFlag(e);
 };
 
+// possum: 3 loops in one.  Hopefully this will help prevent an
+// occasional server lockup when a player picks up and then captures the
+// flag in rapid succession
+void() LoopThroughPlayersAfterCapture =
+{
+	local entity p;
+
+	// count up teamscr
+	lastteamscrtime = time + TEAMSCRTIME;
+	teamscr1 = teamscr2 = 0;
+
+	// Ok, let's do the player loop, hand out the bonuses, add up
+	// the scores, and inform the players about the capture
+
+	p = find(world, classname, "player");
+	while (p != world) {
+
+		// Ok, let's do the player loop, hand out the bonuses
+		self = p;
+		self.killed = 0;
+		if (self.steam == other.steam && self != other)
+			self.frags = self.frags + TEAM_CAPTURE_TEAM_BONUS;
+		if (self.steam != other.steam) {
+			// *XXX* EXPERT CTF
+			// reset the last_hurt_carrier variable in all enemy
+			// players, so that you don't get bonuses for defending
+			// the flag carrier if the flag carrier has already
+			// completed a capture
+			self.last_hurt_carrier = -5;
+		} else if (self.steam == other.steam) {
+			// done to all players on the capturing team
+			// *XXX* EXPERT CTF
+			// award extra points for capture assists
+			if (self.last_returned_flag + TEAM_CAPTURE_RETURN_FLAG_ASSIST_TIMEOUT > time) {
+				bprint(PRINT_HIGH, self.netname);
+				bprint(PRINT_HIGH, " gets an assist for returning his flag!\n");
+				self.frags = self.frags + TEAM_CAPTURE_RETURN_FLAG_ASSIST_BONUS;
+			}
+			if (self.last_fragged_carrier + TEAM_CAPTURE_FRAG_CARRIER_ASSIST_TIMEOUT > time) {
+				bprint(PRINT_HIGH, self.netname);
+				bprint(PRINT_HIGH, " gets an assist for fragging the flag carrier!\n");
+				self.frags = self.frags + TEAM_CAPTURE_FRAG_CARRIER_ASSIST_BONUS;
+			}
+		}
+		self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
+
+		// count up teamscr
+		if (p.steam == TEAM_COLOR1)
+			teamscr1 = teamscr1 + p.frags;
+		else if (p.steam == TEAM_COLOR2)
+			teamscr2 = teamscr2 + p.frags;
+
+		// inform players about capture
+		if ((p.steam == TEAM_COLOR1 && other.steam == TEAM_COLOR2) ||
+			(p.steam == TEAM_COLOR2 && other.steam == TEAM_COLOR1))
+			TeamPlayerUpdate(p, "Your flag was captured!");
+		else if (p.steam == other.steam)
+			TeamPlayerUpdate(p, "Your team captured the flag!");
+
+		// remove any flags
+		p.effects = p.effects - (p.effects & (EF_FLAG1 | EF_FLAG2));
+
+		p = find(p, classname, "player");
+	}
+};
+
 void() TeamCaptureFlagTouch =
 {
 	local entity p, oself;
@@ -1074,52 +1145,9 @@ void() TeamCaptureFlagTouch =
 				// other gets another 10 frag bonus
 				other.frags = other.frags + TEAM_CAPTURE_CAPTURE_BONUS;
 
-				// Ok, let's do the player loop, hand out the bonuses
-				p = find(world, classname, "player");
-				while (p != world) {
-					self = p;
-					self.killed = 0;
-					if (self.steam == other.steam && self != other)
-						self.frags = self.frags + TEAM_CAPTURE_TEAM_BONUS;
-					if (self.steam != other.steam) {
-						// *XXX* EXPERT CTF
-						// reset the last_hurt_carrier variable in all enemy players, so that you don't get
-						// bonuses for defending the flag carrier if the flag carrier has already
-						// completed a capture
-						self.last_hurt_carrier = -5;
-					} else if (self.steam == other.steam) {
-						// done to all players on the capturing team
-						// *XXX* EXPERT CTF
-						// award extra points for capture assists
-						if (self.last_returned_flag + TEAM_CAPTURE_RETURN_FLAG_ASSIST_TIMEOUT > time) {
-							bprint(PRINT_HIGH, self.netname);
-							bprint(PRINT_HIGH, " gets an assist for returning his flag!\n");
-							self.frags = self.frags + TEAM_CAPTURE_RETURN_FLAG_ASSIST_BONUS;
-						}
-						if (self.last_fragged_carrier + TEAM_CAPTURE_FRAG_CARRIER_ASSIST_TIMEOUT > time) {
-							bprint(PRINT_HIGH, self.netname);
-							bprint(PRINT_HIGH, " gets an assist for fragging the flag carrier!\n");
-							self.frags = self.frags + TEAM_CAPTURE_FRAG_CARRIER_ASSIST_BONUS;
-						}
-					}
-					self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
+				// possum: 3 loops in one
+				LoopThroughPlayersAfterCapture();
 
-					p = find(p, classname, "player");
-				}
-
-				TeamCaptureResetUpdate();
-
-				p = find(world, classname, "player");
-				while (p != world) {
-					if ((p.steam == TEAM_COLOR1 && other.steam == TEAM_COLOR2) ||
-						(p.steam == TEAM_COLOR2 && other.steam == TEAM_COLOR1))
-						TeamPlayerUpdate(p, "Your flag was captured!");
-					else if (p.steam == other.steam)
-						TeamPlayerUpdate(p, "Your team captured the flag!");
-					// remove any flags
-					p.effects = p.effects - (p.effects & (EF_FLAG1 | EF_FLAG2));
-					p = find(p, classname, "player");
-				}
 				// respawn flags
 				TeamCaptureRegenFlags();
 				return;
@@ -1252,6 +1280,38 @@ void() TeamFlagStatusReport =
 	// Find the flags at home base
 	flag1 = find (world,classname, "item_flag_team1");
 	flag2 = find (world,classname, "item_flag_team2");
+
+	if (self.classname == "spectator") {
+		if (flag1 != world && flag1.cnt == FLAG_CARRIED) {
+			sprint(self, PRINT_HIGH, flag1.owner.netname);
+			sprint(self, PRINT_HIGH, " has the ред flag.\n");
+		} else {
+			sprint(self, PRINT_HIGH, "The ред flag is ");
+			if (flag1 == world)
+				sprint(self, PRINT_HIGH, "missing!\n");
+			if (flag1.cnt == FLAG_AT_BASE)
+				sprint(self, PRINT_HIGH, "at base.\n");
+			else if (flag1.cnt == FLAG_DROPPED)
+				sprint(self, PRINT_HIGH, "lying about.\n");
+			else
+				sprint(self, PRINT_HIGH, " corrupt.\n");
+		}
+		if (flag2 != world && flag2.cnt == FLAG_CARRIED) {
+			sprint(self, PRINT_HIGH, flag2.owner.netname);
+			sprint(self, PRINT_HIGH, " has the блуе flag. ");
+		} else {
+			sprint(self, PRINT_HIGH, "The блуе flag is ");
+			if (flag2 == world)
+				sprint(self, PRINT_HIGH, "missing!\n");
+			if (flag2.cnt == FLAG_AT_BASE)
+				sprint(self, PRINT_HIGH, "at base.\n");
+			else if (flag2.cnt == FLAG_DROPPED)
+				sprint(self, PRINT_HIGH, "lying about.\n");
+			else
+				sprint(self, PRINT_HIGH, " corrupt.\n");
+		}
+		return;
+	}
 
 	// If on team 2 switch meanings of flags
 	if (self.steam != TEAM_COLOR1) {

@@ -185,7 +185,6 @@ void() worldspawn =
 	else
 		cvar_set ("sv_gravity", "800");
 */
-
 	if (self.model == "maps/ctfstart.bsp" || self.model == "maps/start.bsp")
 		gamestart = 1;
 	else

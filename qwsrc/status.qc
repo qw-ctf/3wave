@@ -3,25 +3,25 @@
 .float motd_count;
 .float statstate;			// is the status bar on?
 
-float teamscr1;			// team 1's teamscr score
-float teamscr2;			// team 2's teamscr score
-float lastteamscrtime;		// last time we calculated it
-
-float TEAMSCRTIME = 1;
 float PLAYERSTATTIME = 1.75;
 
 void() MOTD =
 {
 	if (self.motd_count < 4) {
 		self.motd_count = self.motd_count + 1;
+		if (self.classname == "spectator") {
+			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.21\n\nцаптуре тхе флаг!\n");
+			return;
+		}
+
 		if (gamestart) {
-			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.2\n\nцаптуре тхе флаг!\n\nChoose an exit...\n"); //red
+			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.21\n\nцаптуре тхе флаг!\n\nChoose an exit...\n"); //red
 			return;
 		}
 		if (self.steam == TEAM_COLOR1)
-			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.2\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
+			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.21\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
 		else
-			centerprint(self, "Welcome!\nRunning Threewave CTF 4.2\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
+			centerprint(self, "Welcome!\nRunning Threewave CTF 4.21\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
 		return;
 	}
 	sprint(self, PRINT_HIGH, "Impulse 70 to turn off status bar\n");
