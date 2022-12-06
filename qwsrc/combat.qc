@@ -63,10 +63,11 @@ void(entity targ, entity attacker) Killed =
 	self = targ;
 
 	if (self.health < -99)
-		self.health = -99;              // don't let sbar look bad if a player
+		self.health = -99;		// don't let sbar look bad if a player
 
 	if (self.movetype == MOVETYPE_PUSH || self.movetype == MOVETYPE_NONE)
-	{       // doors, triggers, etc
+	{	// doors, triggers, etc
+
 		self.th_die ();
 		self = oself;
 		return;
@@ -96,6 +97,12 @@ void(entity targ, entity attacker) Killed =
 };
 
 
+// *TEAMPLAY*
+// Prototypes
+
+float(entity targ, entity inflictor, entity attacker, float damage) TeamArmorDam;
+float(entity targ, entity inflictor, entity attacker, float damage) TeamHealthDam;
+
 /*
 ============
 T_Damage
@@ -106,13 +113,10 @@ This should be the only function that ever reduces health.
 */
 void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 {
-	local   vector  dir;
-	local   entity  oldself;
-	local   float   save;
-	local   float   take;
-	local   string  s;
-	local   string  attackerteam, targteam;
-
+	local	vector	dir;
+	local	entity	oldself;
+	local	float	save;
+	local	float	take;
 
 	if (!targ.takedamage)
 		return;
@@ -123,19 +127,48 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 // check for quad damage powerup on the attacker
 	if (attacker.super_damage_finished > time)
 		damage = damage * 4;
+// RUNE: check for double damage for rune of Black Magic powerup
+	if (attacker.player_flag & ITEM_RUNE2_FLAG)
+		damage = damage * 2;
+// RUNE
+
+
+	// *XXX* EXPERT CTF mark players who hurt the flag carrier, so they
+	// are worth more points for a while.
+ 	if ( (attacker.classname == "player") && // attacker must be a player
+ 	     (targ.player_flag & ITEM_ENEMY_FLAG) && // target is a flag carrier
+ 	     (attacker.steam != targ.steam)) // target and attacker on diff teams
+ 		attacker.last_hurt_carrier = time;
 
 // save damage based on the target's armor level
 
+// *TEAMPLAY*
+// TeamArmorDam returns true iff the attacker can damage the target's armor
+
+	if (TeamArmorDam(targ, inflictor, attacker, damage))
 	save = ceil(targ.armortype*damage);
+	else
+		save = 0;
+
 	if (save >= targ.armorvalue)
 	{
 		save = targ.armorvalue;
-		targ.armortype = 0;     // lost all armor
+		targ.armortype = 0;	// lost all armor
 		targ.items = targ.items - (targ.items & (IT_ARMOR1 | IT_ARMOR2 | IT_ARMOR3));
 	}
 
 	targ.armorvalue = targ.armorvalue - save;
 	take = ceil(damage-save);
+
+//RUNE check if target has rune of Earth Magic (half damage)
+	if (targ.player_flag & ITEM_RUNE1_FLAG) {
+		take = take / 2;
+		if (targ.invincible_sound < time) {
+			sound (targ, CHAN_ITEM, "items/protect3.wav", 1, ATTN_NORM);
+			targ.invincible_sound = time + 2;
+		}
+	}
+//RUNE
 
 // add to the damage total for clients, which will be sent as a single
 // message at the end of the frame
@@ -147,27 +180,12 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 		targ.dmg_inflictor = inflictor;
 	}
 
-	damage_inflictor = inflictor;
-
-
 // figure momentum add
 	if ( (inflictor != world) && (targ.movetype == MOVETYPE_WALK) )
 	{
 		dir = targ.origin - (inflictor.absmin + inflictor.absmax) * 0.5;
 		dir = normalize(dir);
-		// Set kickback for smaller weapons
-		// Read: only if it's not yourself doing the damage
-		if ( (damage < 60) & ((attacker.classname == "player") & (targ.classname == "player")) & ( attacker.netname != targ.netname))
-			targ.velocity = targ.velocity + dir * damage * 11;
-		else
-		// Otherwise, these rules apply to rockets and grenades
-		// for blast velocity
-			targ.velocity = targ.velocity + dir * damage * 8;
-
-		// Rocket Jump modifiers
-		if ( (rj > 1) & ((attacker.classname == "player") & (targ.classname == "player")) & ( attacker.netname == targ.netname))
-			targ.velocity = targ.velocity + dir * damage * rj;
-
+		targ.velocity = targ.velocity + dir*damage*8;
 	}
 
 // check for godmode or invincibility
@@ -184,17 +202,15 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 	}
 
 // team play damage avoidance
-//ZOID 12-13-96: self.team doesn't work in QW.  Use keys
-	attackerteam = infokey(attacker, "team");
-	targteam = infokey(targ, "team");
+	if ( (teamplay == 1) && (targ.team > 0)&&(targ.team == attacker.team) )
+		return;
 
-	if ((teamplay == 1) && (targteam == attackerteam) &&
-		(attacker.classname == "player") && (attackerteam != ""))
-		return;
-	if ((teamplay == 3) && (targteam == attackerteam) &&
-		(attacker.classname == "player") && (attackerteam != "") &&
-		(targ != attacker))
-		return;
+// *TEAMPLAY*
+// TeamHealthDam will return true if the attacker can damage the target's
+// health
+
+        if (!TeamHealthDam(targ, inflictor, attacker, damage))
+                return;
 
 // do the damage
 	targ.health = targ.health - take;
@@ -241,9 +257,9 @@ T_RadiusDamage
 */
 void(entity inflictor, entity attacker, float damage, entity ignore) T_RadiusDamage =
 {
-	local   float   points;
-	local   entity  head;
-	local   vector  org;
+	local	float 	points;
+	local	entity	head;
+	local	vector	org;
 
 	head = findradius(inflictor.origin, damage+40);
 
@@ -263,7 +279,7 @@ void(entity inflictor, entity attacker, float damage, entity ignore) T_RadiusDam
 				if (points > 0)
 				{
 					if (CanDamage (head, inflictor))
-					{       // shambler takes half damage from all explosions
+					{	// shambler takes half damage from all explosions
 						if (head.classname == "monster_shambler")
 							T_Damage (head, inflictor, attacker, points*0.5);
 						else
@@ -283,8 +299,8 @@ T_BeamDamage
 */
 void(entity attacker, float damage) T_BeamDamage =
 {
-	local   float   points;
-	local   entity  head;
+	local	float 	points;
+	local	entity	head;
 
 	head = findradius(attacker.origin, damage+40);
 

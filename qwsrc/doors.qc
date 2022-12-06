@@ -47,7 +47,7 @@ void() door_blocked =
 
 void() door_hit_top =
 {
-	sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise1, 1, ATTN_NORM);
+	sound (self, CHAN_VOICE, self.noise1, 1, ATTN_NORM);
 	self.state = STATE_TOP;
 	if (self.spawnflags & DOOR_TOGGLE)
 		return;		// don't come down automatically
@@ -57,7 +57,7 @@ void() door_hit_top =
 
 void() door_hit_bottom =
 {
-	sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise1, 1, ATTN_NORM);
+	sound (self, CHAN_VOICE, self.noise1, 1, ATTN_NORM);
 	self.state = STATE_BOTTOM;
 };
 
@@ -560,6 +560,7 @@ float SECRET_1ST_LEFT = 2;		// 1st move is left of arrow
 float SECRET_1ST_DOWN = 4;		// 1st move is down from arrow
 float SECRET_NO_SHOOT = 8;		// only opened by trigger
 float SECRET_YES_SHOOT = 16;	// shootable even if targeted
+float SECRET_NEVER = 32;		// lock it shut
 
 
 void () fd_secret_use =
@@ -575,6 +576,9 @@ void () fd_secret_use =
 	self.message = string_null;		// no more message
 
 	SUB_UseTargets();				// fire all targets / killtargets
+
+	if (self.spawnflags & SECRET_NEVER)
+		return; // it never opens
 
 	if (!(self.spawnflags & SECRET_NO_SHOOT))
 	{
@@ -666,9 +670,8 @@ void () fd_secret_done =
 		self.health = 10000;
 		self.takedamage = DAMAGE_YES;
 		self.th_pain = fd_secret_use;
-		self.th_die = fd_secret_use;
 	}
-	sound(self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise3, 1, ATTN_NORM);
+	sound(self, CHAN_VOICE, self.noise3, 1, ATTN_NORM);
 };
 
 void () secret_blocked =
@@ -771,6 +774,7 @@ void () func_door_secret =
 		self.health = 10000;
 		self.takedamage = DAMAGE_YES;
 		self.th_pain = fd_secret_use;
+		self.th_die = fd_secret_use;
 	}
 	self.oldorigin = self.origin;
 	if (!self.wait)

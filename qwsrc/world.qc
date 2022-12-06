@@ -172,6 +172,10 @@ World Types:
 void() worldspawn =
 {
 	lastspawn = world;
+	runespawn = world;
+	runespawned = 0;
+	capturespawned = 0;
+	teamscored = 0;
 	InitBodyQue ();
 
 // custom map attributes
@@ -188,6 +192,9 @@ void() worldspawn =
 
 // player precaches
 	W_Precache ();			// get weapon precaches
+
+// Set up team notices
+	TeamCaptureSetUpdate();
 
 // sounds used from C physics code
 	precache_sound ("demon/dland2.wav");		// landing thud
@@ -245,6 +252,7 @@ void() worldspawn =
 	precache_sound ("weapons/ax1.wav");			// ax swoosh
 	precache_sound ("player/axhit1.wav");		// ax hit meat
 	precache_sound ("player/axhit2.wav");		// ax hit world
+	precache_sound ("hknight/hit.wav");			// ZOID: hook launch
 
 	precache_sound ("player/h2ojump.wav");		// player jumping into water
 	precache_sound ("player/slimbrn2.wav");		// player enter slime
@@ -259,8 +267,9 @@ void() worldspawn =
 	precache_sound ("misc/water2.wav");			// swimming
 
 	precache_model ("progs/player.mdl");
-	precache_model ("progs/eyes.mdl");
 	precache_model ("progs/h_player.mdl");
+
+	precache_model ("progs/eyes.mdl");
 	precache_model ("progs/gib1.mdl");
 	precache_model ("progs/gib2.mdl");
 	precache_model ("progs/gib3.mdl");
@@ -292,6 +301,15 @@ void() worldspawn =
 
 	precache_model ("progs/v_light.mdl");
 
+
+//ZOID: rune precache
+	precache_model ("progs/end1.mdl");
+	precache_model ("progs/end2.mdl");
+	precache_model ("progs/end3.mdl");
+	precache_model ("progs/end4.mdl");
+	precache_sound ("items/protect3.wav");
+	precache_sound ("items/r_item1.wav");
+	precache_sound ("boss1/sight1.wav");
 
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
@@ -384,6 +402,7 @@ void() InitBodyQue =
 // respawned elsewhere
 void(entity ent) CopyToBodyQue =
 {
+	bodyque_head.skin = ent.skin;
 	bodyque_head.angles = ent.angles;
 	bodyque_head.model = ent.model;
 	bodyque_head.modelindex = ent.modelindex;

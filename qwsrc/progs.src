@@ -1,10 +1,16 @@
 ../progs.dat
 
 defs.qc
+
+teamplay.qc
+
 subs.qc
 combat.qc
 items.qc
 weapons.qc
+
+telefrag.qc
+
 world.qc
 client.qc
 player.qc
