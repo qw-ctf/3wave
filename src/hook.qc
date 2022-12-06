@@ -121,6 +121,13 @@ void () HookPull =
 			// don't hurt teammates
 			if (self.enemy.classname != "player" || !teamplay ||
 				self.enemy.lastteam != self.owner.lastteam) {
+
+				// 4.1, if we can't see our enemy, unlock
+				if (!CanDamage(self.enemy, self.owner)) {
+					HookVanish();
+					return;
+				}
+
 				sound (self, CHAN_WEAPON, "blob/land1.wav", 1, ATTN_NORM);
 				T_Damage (self.enemy, self, self.owner, 1);
 				makevectors (self.v_angle);

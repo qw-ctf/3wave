@@ -29,6 +29,8 @@ float team2shirt;
 entity team1_lastspawn;
 entity team2_lastspawn;
 float	nextteamupdtime;	// time until next team update
+float last_flag_capture;	// time of last capture
+float last_capture_team;	// last team that captured
 
 // Teamplay bitfield entries
 
@@ -41,6 +43,7 @@ float TEAM_STATIC_TEAMS =       64;     // Don't allow players to switch teams
 float TEAM_DROP_ITEMS = 		128;	// Allow players to drop packs and
 float TEAM_CAPTURE_CUSTOM = 	512;	// custom models
 float TEAM_CAPTURE_SELECT_TEAM = 1024; // team selection
+float TEAM_DISABLE_GRAPPLE = 2048; // team selection
 
 float TEAM_CAPTURE_CAPTURE_BONUS = 15; // what you get for capture
 float TEAM_CAPTURE_TEAM_BONUS = 10; // what your team gets for capture
@@ -959,6 +962,9 @@ void() TeamCaptureFlagTouch =
 					bprint(" γαπτυςεδ the ÒΕΔ flag!\n"); // red
 				LogMsg(other, "FLAG-CAPTURE");
 				other.items = other.items - (other.items & (IT_KEY1 | IT_KEY2));
+
+				last_flag_capture = time;
+				last_capture_team = other.team;
 
 				if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM)
 					sound (other, CHAN_VOICE, "misc/flagcap.wav", 1, ATTN_NONE);

@@ -1296,6 +1296,12 @@ void() PreviousWeaponCommand =
 	self.impulse = 0;
 	am = 0;
 
+	if (!(self.items & self.previous_weapon))
+	{	// don't have the weapon or the ammo
+		sprint (self, "no weapon.\n");
+		return;
+	}
+
 	fl = self.weapon;
 	self.weapon = self.previous_weapon;
 	self.previous_weapon = fl;
@@ -1425,11 +1431,17 @@ void() ImpulseCommands =
 		identify_player();
 
 	else if (self.impulse == 70) {
-		self.statoff = !self.statoff; // status bar toggle
-		if (self.statoff)
+		if (self.statstate < 0) {
+			self.statstate = 0;
+			sprint(self, "Status bar on (impulse 71 to 81 to set size)\n");
+		} else {
+			self.statstate = -1;
 			sprint(self, "Status bar off.\n");
-		else
-			sprint(self, "Status bar on.\n");
+		}
+
+	} else if (self.impulse >= 71 && self.impulse <= 81) {
+		self.statstate = self.impulse - 71;
+		sprint(self, "Status bar set\n");
 
 	} else if (self.impulse == 255)
 		QuadCheat ();

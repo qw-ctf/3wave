@@ -24,6 +24,8 @@ float TEAM_COLOR2       =       13;
 entity team1_lastspawn;
 entity team2_lastspawn;
 float	nextteamupdtime;	// time until next team update
+float last_flag_capture;	// time of last capture
+float last_capture_team;	// last team that captured
 
 // Teamplay bitfield entries
 
@@ -36,6 +38,7 @@ float TEAM_LOCK_COLORS =        32;     // Allow only team colors
 float TEAM_STATIC_TEAMS =       64;     // Don't allow players to switch teams
 float TEAM_DROP_ITEMS = 	128;	// Allow players to drop packs and
 float TEAM_CAPTURE_FLAG =	256;	// Play capture the flag
+float TEAM_DISABLE_GRAPPLE = 2048; // team selection
 
 float TEAM_CAPTURE_CAPTURE_BONUS = 15; // what you get for capture
 float TEAM_CAPTURE_TEAM_BONUS = 10; // what your team gets for capture
@@ -399,6 +402,21 @@ void() TeamSkinAssign =
 	TeamSkinSet();
 };
 
+float(float tcolor, float bcolor) CrossDressCheck =
+{
+	// All colors are legal is teamplay is negative.
+	if(teamplay < 0)
+		return FALSE;
+	// All colors are legal is TEAM_LOCK_COLORS is off.
+	if( !(teamplay & TEAM_LOCK_COLORS) )
+		return FALSE;
+	if(tcolor == TEAM_COLOR1 && bcolor == TEAM_COLOR2)
+		return TRUE;
+	if(tcolor == TEAM_COLOR2 && bcolor == TEAM_COLOR1)
+		return TRUE;
+	return FALSE;
+};
+
 /*
 ==================
 TeamAssign
@@ -453,6 +471,8 @@ void() TeamAssign =
 
 	self.steam = newcolor;
 	TeamSkinAssign();
+
+	self.player_flag = self.player_flag | TEAM_STUFF_COLOR;
 };
 
 /*
@@ -465,7 +485,7 @@ Check for team changing and perform whatever actions are neccessary.
 void() TeamCheckLock =
 {
         local   float   n;
-        local   string  s;
+        local   string  s, t;
 		local	float	pteam;
 
         // Don't do anything if teamplay is negative
@@ -489,6 +509,15 @@ void() TeamCheckLock =
 			stuffcmd(self, s);
 			stuffcmd(self, "\n");
 
+			s = infokey(self, "topcolor");
+			n = stof(s);
+			if (CrossDressCheck(n, self.steam)) {
+				s = ftos(self.steam);
+				stuffcmd(self, "setinfo topcolor ");
+				stuffcmd(self, s);
+				stuffcmd(self, "\n");
+			}
+
 			s = GetShortTeamColor(self.steam);
 			stuffcmd(self, "setinfo team ");
 			stuffcmd(self, s);
@@ -499,6 +528,8 @@ void() TeamCheckLock =
 				stuffcmd(self, self.ctfskin);
 				stuffcmd(self, "\n");
 			}
+
+
 
 			self.lastteamset = time;
 			return;
@@ -524,6 +555,17 @@ void() TeamCheckLock =
 				stuffcmd(self, "\n");
 				self.lastteamset = time;
 			}
+		}
+
+		// check for crossdressing
+		s = infokey(self, "topcolor");
+		n = stof(s);
+		if (CrossDressCheck(n, self.steam)) {
+			s = ftos(self.steam);
+			stuffcmd(self, "setinfo topcolor ");
+			stuffcmd(self, s);
+			stuffcmd(self, "\n");
+			return;
 		}
 
         // Check to see if the player has changed colors
@@ -573,7 +615,7 @@ void() TeamCheckLock =
 			if ( !(teamplay & TEAM_LOCK_COLORS) )
 				return;
 
-			if (self.steam > 0) {
+			if (self.steam >= 0) {
 				// case base respawn
 				self.killed = 99;
 				T_Damage(self,self,self,1000);  // Kill the player
@@ -1018,6 +1060,9 @@ void() TeamCaptureFlagTouch =
 				else
 					bprint(PRINT_HIGH, " γαπτυςεδ the ÒΕΔ flag!\n"); // red
 				other.items = other.items - (other.items & (IT_KEY1 | IT_KEY2));
+
+				last_flag_capture = time;
+				last_capture_team = other.team;
 
 				sound (other, CHAN_VOICE, "misc/flagcap.wav", 1, ATTN_NONE);
 

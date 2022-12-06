@@ -1,7 +1,7 @@
 
 .float laststattime;		// time of last status update
 .float motd_count;
-.float statoff;				// is the status bar on?
+.float statstate;			// is the status bar on?
 
 float teamscr1;			// team 1's teamscr score
 float teamscr2;			// team 2's teamscr score
@@ -15,15 +15,18 @@ void() MOTD =
 	if (self.motd_count < 4) {
 		self.motd_count = self.motd_count + 1;
 		if (gamestart) {
-			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.0\n\nÃÁÐÔÕÒÅ ÔÈÅ ÆÌÁÇ!\n\nChoose an exit...\n"); //red
+			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.1\n\nÃÁÐÔÕÒÅ ÔÈÅ ÆÌÁÇ!\n\nChoose an exit...\n"); //red
 			return;
 		}
 		if (self.team == TEAM_COLOR1)
-			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.0\n\nÃÁÐÔÕÒÅ ÔÈÅ ÆÌÁÇ!\n\nYou are ÒÅÄ team\n"); //red
+			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.1\n\nÃÁÐÔÕÒÅ ÔÈÅ ÆÌÁÇ!\n\nYou are ÒÅÄ team\n"); //red
 		else
-			centerprint(self, "Welcome!\nRunning Threewave CTF 4.0\n\nÃÁÐÔÕÒÅ ÔÈÅ ÆÌÁÇ!\n\nYou are ÂÌÕÅ team"); //blue
+			centerprint(self, "Welcome!\nRunning Threewave CTF 4.1\n\nÃÁÐÔÕÒÅ ÔÈÅ ÆÌÁÇ!\n\nYou are ÂÌÕÅ team"); //blue
 		return;
 	}
+	sprint(self, "Impulse 70 to turn off status bar\n");
+	sprint(self, "Impulse 71 through 81 to set status bar resolution\n");
+	sprint(self, "71:200 72:240 73:300 74:350 75:384 76:400 77:480 78:600 79:768 81:1024\n");
 	self.motd_count = 0;
 };
 
@@ -31,7 +34,7 @@ void() MOTD_ChooseTeam =
 {
 	if (self.motd_count < 6) {
 		self.motd_count = self.motd_count + 1;
-		centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.0\n\nÃÁÐÔÕÒÅ ÔÈÅ ÆÌÁÇ!\n\nPress 1 for ÒÅÄ team\nPress 2 for ÂÌÕÅ team\nOr Press Jump for automatic team\n");
+		centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.1\n\nÃÁÐÔÕÒÅ ÔÈÅ ÆÌÁÇ!\n\nPress 1 for ÒÅÄ team\nPress 2 for ÂÌÕÅ team\nOr Press Jump for automatic team\n");
 		return;
 	}
 	self.motd_count = 0;
@@ -102,23 +105,54 @@ void() TeamEndScore =
 	}
 };
 
-string(entity who) RuneName =
+string(entity who) TeamSetStatRes =
 {
-	if (who.player_flag & ITEM_RUNE1_FLAG)
-		return "\nEarth/Resistance   ";
-	if (who.player_flag & ITEM_RUNE2_FLAG)
-		return "\nBlack/Strength     ";
-	if (who.player_flag & ITEM_RUNE3_FLAG)
-		return "\nHell/Haste         ";
-	if (who.player_flag & ITEM_RUNE4_FLAG)
-		return "\nElder/Regeneration ";
-	return     "\n                   ";
+	if (who.statstate > 7) // 768
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 7) // 600
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 6) // 480
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 5) // 400
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 4) // 384
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 3) // 350
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 2) // 300
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 1) // 240
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	// 200
+	return "\n\n\n\n\n\n\n\n\n\n\n\n";
+};
+
+string(entity who) TeamSetStatRes2 =
+{
+	if (who.statstate > 7) // 768
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 7) // 600
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 6) // 480
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 5) // 400
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 4) // 384
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 3) // 350
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 2) // 300
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	else if (who.statstate == 1) // 240
+		return "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	// 200
+	return "\n\n\n\n\n\n\n\n\n\n\n";
 };
 
 void() TeamCapturePlayerUpdate =
 {
-	local string n;
-	local string t;
+	local entity e;
+	local string n, t, s1, s2, s3, res;
 
 	if (self.laststattime > time)
 		return;
@@ -135,89 +169,155 @@ void() TeamCapturePlayerUpdate =
 		return;
 	}
 
-	if (self.statoff)
+	if (self.statstate < 0)
 		return;
+
+	res = TeamSetStatRes(self);
 
 	if (gamestart) {
 		if (vote_leader == world)
-			centerprint(self, "\n\n\n\n\n\n\n\n\n\n\n\n                    Choose an exit...");
+			centerprint2(self, res, "                    Choose an exit...");
 		else {
+			res = TeamSetStatRes2();
 			n = ftos(voteexit_time - time);
-			centerprint5(self, "\n\n\n\n\n\n\n\n\n\n\n", vote_leader.message,
+			centerprint5(self, res, vote_leader.message,
 				" leads\n", n, " seconds until exit");
 		}
 		return;
 	}
 
-	t = RuneName(self);
+	//.1234567890123456789012345678901234567
+	// Res.R.B.             Capture The Flag
+	// Res.R.B.                     BLUE 999
+
+	if (self.player_flag & ITEM_RUNE1_FLAG)
+		s1 = "Resist  …";
+	else if (self.player_flag & ITEM_RUNE2_FLAG)
+		s1 = "Strength…";
+	else if (self.player_flag & ITEM_RUNE3_FLAG)
+		s1 = "Haste   …";
+	else if (self.player_flag & ITEM_RUNE4_FLAG)
+		s1 = "Regen   …";
+	else
+		s1 = "        …";
+
+	e = find(world, classname, "item_flag_team1");
+	if (e.cnt == FLAG_AT_BASE)
+		s2 = " …";
+	else if (e.cnt == FLAG_CARRIED)
+		s2 = "R…";
+	else
+		s2 = "Ò…";
+
+	e = find(world, classname, "item_flag_team2");
+	if (e.cnt == FLAG_AT_BASE)
+		s3 = " …";
+	else if (e.cnt == FLAG_CARRIED)
+		s3 = "B…";
+	else
+		s3 = "Â…";
+
 	if (teamscr1 == 0 && teamscr2 == 0) {
-		centerprint3(self, "\n\n\n\n\n\n\n\n\n\n\n", t, "  Capture The Flag");
+		centerprint5(self, res, s1, s2, s3, "         Capture The Flag");		// CTFBOT
 		return;
 	}
 
-	if (teamscr1 > teamscr2) {
-		n = ftos(teamscr1 - teamscr2);
-		centerprint4(self, "\n\n\n\n\n\n\n\n\n\n\n", t, "           RED ", n);
-	} else if (teamscr1 < teamscr2) {
-		n = ftos(teamscr2 - teamscr1);
-		centerprint4(self, "\n\n\n\n\n\n\n\n\n\n\n", t, "          BLUE ", n);
-	} else {
-		centerprint3(self, "\n\n\n\n\n\n\n\n\n\n\n", t, "          TIED");
-		return;
+	if (time < (last_flag_capture + 6))
+	{
+		if (last_capture_team == TEAM_COLOR1)
+		{
+			if (teamscr1 > teamscr2) {
+				t = "Red Capture!   RED ";
+				n = ftos(teamscr1 - teamscr2);
+			} else if (teamscr1 < teamscr2) {
+				t = "Red Capture!  BLUE ";
+				n = ftos(teamscr2 - teamscr1);
+			} else {
+				t = "Red Capture!  TIED ";
+				n = "";
+			}
+		}
+		else
+		{
+			if (teamscr1 > teamscr2) {
+				t = "Blue Capture!  RED ";
+				n = ftos(teamscr1 - teamscr2);
+			} else if (teamscr1 < teamscr2) {
+				t = "Blue Capture! BLUE ";
+				n = ftos(teamscr2 - teamscr1);
+			} else {
+				t = "Blue Capture! TIED ";
+				n = "";
+			}
+		}
 	}
+	else
+	{
+		if (teamscr1 > teamscr2) {
+			t = "               RED ";
+			n = ftos(teamscr1 - teamscr2);
+		} else if (teamscr1 < teamscr2) {
+			t = "              BLUE ";
+			n = ftos(teamscr2 - teamscr1);
+		} else {
+			t = "              TIED ";
+			n = "";
+		}
+	}
+	centerprint7(self, res, s1, s2, s3, "    ", t, n);		//
 };
 
 void(entity who, string s) TeamPlayerUpdate =
 {
-	local string n;
-	local string t;
+	local string n, res;
 
 	TeamCaptureCheckUpdate();
 	who.laststattime = time + PLAYERSTATTIME;
 
-	if (self.statoff) {
-		centerprint2(who, "\n\n\n\n\n\n\n\n\n\n\n", s);
+	if (who.statstate < 0) {
+		centerprint(who, s);
 		return;
 	}
 
-	t = RuneName(who);
+	res = TeamSetStatRes2(who);
+
 	if (teamscr1 == 0 && teamscr2 == 0) {
-		centerprint4(who, "\n\n\n\n\n\n\n\n\n\n\n", s, t, "  Capture The Flag");
+		centerprint3(who, res, s, "\n                       Capture The Flag");
 	} else if (teamscr1 > teamscr2) {
 		n = ftos(teamscr1 - teamscr2);
-		centerprint5(who, "\n\n\n\n\n\n\n\n\n\n\n", s, t, "           RED ", n);
+		centerprint4(who, res, s, "\n                               RED ", n);
 	} else if (teamscr1 < teamscr2) {
 		n = ftos(teamscr2 - teamscr1);
-		centerprint5(who, "\n\n\n\n\n\n\n\n\n\n\n", s, t, "          BLUE ", n);
+		centerprint4(who, res, s, "\n                               BLUE ", n);
 	} else
-		centerprint4(who, "\n\n\n\n\n\n\n\n\n\n\n", s, t, "          TIED");
+		centerprint3(who, res, s, "\n                               TIED");
 };
 
 void(entity who, string s1, string s2) TeamPlayerUpdate2 =
 {
-	local string n;
-	local string t;
+	local string n, res;
 
 	TeamCaptureCheckUpdate();
 	who.laststattime = time + PLAYERSTATTIME;
 
-	if (self.statoff) {
-		centerprint3(who, "\n\n\n\n\n\n\n\n\n\n\n", s1, s2);
+	if (who.statstate < 0) {
+		centerprint2(who, s1, s2);
 		return;
 	}
 
-	t = RuneName(who);
+	res = TeamSetStatRes2(who);
+
 	if (teamscr1 == 0 && teamscr2 == 0) {
-		centerprint5(who, "\n\n\n\n\n\n\n\n\n\n\n", s1, s2, t, " Capture The Flag");
+		centerprint4(who, res, s1, s2, "\n                       Capture The Flag");
 		return;
 	} else if (teamscr1 > teamscr2) {
 		n = ftos(teamscr1 - teamscr2);
-		centerprint6(who, "\n\n\n\n\n\n\n\n\n\n\n", s1, s2, t, "          RED ", n);
+		centerprint5(who, res, s1, s2, "\n                               RED ", n);
 	} else if (teamscr1 < teamscr2) {
 		n = ftos(teamscr2 - teamscr1);
-		centerprint6(who, "\n\n\n\n\n\n\n\n\n\n\n", s1, s2, t, "          BLUE ", n);
+		centerprint5(who, res, s1, s2, "\n                               BLUE ", n);
 	} else {
-		centerprint5(who, "\n\n\n\n\n\n\n\n\n\n\n", s1, s2, t, "          TIED");
+		centerprint4(who, res, s1, s2, "\n                               TIED");
 		return;
 	}
 };

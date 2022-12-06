@@ -9,7 +9,6 @@ ident.qc
 subs.qc
 combat.qc
 items.qc
-camera.qc
 observ.qc
 weapons.qc
 telefrag.qc		// from server modules

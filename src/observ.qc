@@ -99,16 +99,7 @@ float() DoObserverImpulse =
 	if (self.impulse == 1 || self.impulse == 2 || /* self.impulse == 3 ||  */
 		self.button2) {
 
-/*
-		if (self.impulse == 3) {
-			if (self.CamState == CAM_NOT)
-				self.CamState = CAM_BECOME;
-			return TRUE;
-		}
-*/
-
 		self.observer = 0;
-		self.CamState = CAM_NOT;
 		SetChangeParms ();
 		self.killed = 0;
 

@@ -71,6 +71,7 @@ void() SetChangeParms =
 			parm10 = -1;
 		else
 			parm10 = self.steam; // Save the current team of the player
+		parm14 = self.statstate;
 		return;
 	}
 
@@ -89,7 +90,9 @@ void() SetChangeParms =
 		parm10 = -1;
 	else
 		parm10 = self.steam; // Save the current team of the player
+	parm14 = self.statstate;
 	parm16 = self.player_flag;
+
 };
 
 void() SetNewParms =
@@ -101,7 +104,10 @@ void() SetNewParms =
 		parm8 = IT_AXE;
 		parm10 = 1;
 	} else {
-		parm1 = IT_SHOTGUN | IT_AXE | IT_GRAPPLE;
+		if (cvar("teamplay") & TEAM_DISABLE_GRAPPLE)
+			parm1 = IT_SHOTGUN | IT_AXE;
+		else
+			parm1 = IT_SHOTGUN | IT_AXE | IT_GRAPPLE;
 		parm2 = 100;
 		parm3 = 50;
 		parm9 = 30;
@@ -116,6 +122,7 @@ void() SetNewParms =
 	parm8 = IT_SHOTGUN;
 // *TEAMPLAY*
 	parm10 = -1;	// Reset
+	parm14 = self.statstate;
 	parm16 = 0;
 };
 
@@ -124,6 +131,7 @@ void() DecodeLevelParms =
 	self.player_flag = self.player_flag | parm16;
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_RUNE_MASK);
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
+	self.statstate = parm14;
 
 	if (gamestart) {
 		SetNewParms ();		// take away all stuff on starting new episode
@@ -1311,6 +1319,8 @@ void() ClientDisconnect =
 
 	self.player_flag = self.player_flag | PF_GHOST;
 	self.steam = -1;
+	self.frags = 0;
+	self.statstate = 0;
 };
 
 // *TEAMPLAY*

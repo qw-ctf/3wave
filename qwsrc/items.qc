@@ -1427,7 +1427,7 @@ void() RuneTouch =
 		return;
 	if (other.player_flag & ITEM_RUNE_MASK) {
 		if (other.rune_notice_time < time) {
-			centerprint(other, "You already have a rune.\n");
+			TeamPlayerUpdate(other, "You already have a rune.");
 			other.rune_notice_time = time + 5;
 		}
 		return; // one per customer
@@ -1441,28 +1441,28 @@ void() RuneTouch =
 			bprint(PRINT_LOW, other.netname);
 			bprint(PRINT_LOW, " got the rune of Åבעפט Íבחיד!\n");
 		}
-		centerprint(other, "Åבעפט Íבחיד!\n\nÒוףיףפבמדו");
+		TeamPlayerUpdate(other, "Åבעפט Íבחיד!    Òוףיףפבמדו");
 	}
 	if (self.player_flag & ITEM_RUNE2_FLAG) {
 		if (teamplay == 0) {
 			bprint(PRINT_LOW, other.netname);
 			bprint(PRINT_LOW, " got the rune of Âלבדכ Íבחיד!\n");
 		}
-		centerprint(other, "Âלבדכ Íבחיד!\n\nÓפעומחפט");
+		TeamPlayerUpdate(other, "Âלבדכ Íבחיד!    Óפעומחפט");
 	}
 	if (self.player_flag & ITEM_RUNE3_FLAG) {
 		if (teamplay == 0) {
 			bprint(PRINT_LOW, other.netname);
 			bprint(PRINT_LOW, " got the rune of Èולל Íבחיד!\n");
 		}
-		centerprint(other, "Èולל Íבחיד!\n\nÈבףפו");
+		TeamPlayerUpdate(other, "Èולל Íבחיד!    Èבףפו");
 	}
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
 		if (teamplay == 0) {
 			bprint(PRINT_LOW, other.netname);
 			bprint(PRINT_LOW, " got the rune of Åלהוע Íבחיד!\n");
 		}
-		centerprint(other, "Åלהוע Íבחיד!\n\nÒוחומועבפיןמ");
+		TeamPlayerUpdate(other, "Åלהוע Íבחיד!    Òוחומועבפיןמ");
 	}
 
 	// backpack touch sound

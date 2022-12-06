@@ -27,7 +27,7 @@ entity(float disp) identify_player =
 	{
 		// Get a vector pointing from the viewer to the current
 		// player under consideration
-		diff=self.origin - e.origin;
+		diff=e.origin - self.origin;
 
 		// Normalize it since we only care where he's pointing,
 		// not how far away the guy is.

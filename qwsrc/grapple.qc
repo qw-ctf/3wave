@@ -57,6 +57,14 @@ void () Grapple_Track =
         // bring the pAiN!
         if (self.enemy.classname == "player")
         {
+
+			// 4.1, if we can't see our enemy, unlock
+			if (!CanDamage(self.enemy, self.owner)) {
+				Reset_Grapple(self);
+				return;
+			}
+
+
 			// move the hook along with the player.  It's invisible, but
 			// we need this to make the sound come from the right spot
 			setorigin(self, self.enemy.origin);

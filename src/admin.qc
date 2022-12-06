@@ -53,7 +53,6 @@ float	ADMIN_KICK = 151;
 float	ADMIN_TEAMCHANGE = 152;
 float	ADMIN_CHANGEMAP = 153;
 float	ADMIN_GIVERUNE = 154;
-float	ADMIN_CAMERA = 155;
 float	ADMIN_TIMELIMIT = 156;
 float	ADMIN_FRAGLIMIT = 157;
 
@@ -112,9 +111,6 @@ void() CheckAdminCmd =
 		st = ftos(ADMIN_GIVERUNE);
 		sprint(self, st);
 		sprint(self, " to give rune\n");
-		st = ftos(ADMIN_CAMERA);
-		sprint(self, st);
-		sprint(self, " to become autocam\n");
 		st = ftos(ADMIN_TIMELIMIT);
 		sprint(self, st);
 		sprint(self, " to set timelimit\n");
@@ -504,10 +500,6 @@ void() CheckAdminCmd =
 		sprint(self, "4 Elder Magic - Regen\n");
 
 		self.accessparm = 20;
-
-	} else if (self.impulse == ADMIN_CAMERA) {
-		self.CamState = CAM_BECOME;
-		sprint(self, "Becoming Camera\n");
 
 	} else if (self.impulse == ADMIN_TIMELIMIT) {
 		sprint(self, "Enter timelimit via impulse\n");

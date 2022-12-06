@@ -63,10 +63,10 @@ void() SetChangeParms =
 {
 	if (self.health <= 0)
 	{
+		parm14 = self.statstate;
 		SetNewParms ();
 // *TEAMPLAY*
 		parm10 = self.lastteam;	// Save the current team of the player
-		parm11 = self.CamState;
 		parm15 = self.accesslvl; // remote admin state
 		parm16 = self.player_flag;
 		return;
@@ -81,13 +81,13 @@ void() SetChangeParms =
 		self.health = 100;
 	if (self.health < 50)
 		self.health = 50;
+	parm14 = self.statstate;
 	SetNewParms();
 // *TEAMPLAY*
 	if (gamestart || self.observer)
 		parm10 = -1;
 	else
 		parm10 = self.lastteam;	// Save the current team of the player
-	parm11 = self.CamState;
 	parm15 = self.accesslvl; // remote admin state
 	parm16 = self.player_flag;
 };
@@ -101,7 +101,10 @@ void() SetNewParms =
 		parm8 = IT_AXE;
 		parm10 = 1;
 	} else {
-		parm1 = IT_SHOTGUN | IT_AXE | IT_HOOK;
+		if (cvar("teamplay") & TEAM_DISABLE_GRAPPLE)
+			parm1 = IT_SHOTGUN | IT_AXE;
+		else
+			parm1 = IT_SHOTGUN | IT_AXE | IT_HOOK;
 		parm2 = 100;
 		parm3 = 50;
 		parm9 = 30;
@@ -114,7 +117,7 @@ void() SetNewParms =
 	parm6 = 0;
 	parm7 = 0;
 // *TEAMPLAY*
-	parm11 = CAM_NOT;
+	parm14 = self.statstate;
 	parm15 = 0; // remote admin
 	parm16 = 0;
 };
@@ -126,6 +129,7 @@ void() DecodeLevelParms =
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
 	self.skin = (self.player_flag & 65280)/256;
 	self.accesslvl = parm15;
+	self.statstate = parm14;
 
 	if (gamestart)
 		SetNewParms ();		// take away all stuff on starting new episode
@@ -148,9 +152,6 @@ void() DecodeLevelParms =
 	self.last_fragged_carrier = -10;
 	self.flag_since = -10;
 	self.last_hurt_carrier = -10;
-
-	if (parm11 > CAM_NOT)
-		self.CamState = CAM_PREBECOME;
 
 // *TEAMPLAY*
 	if(TeamColorIsLegal(parm10))
@@ -1086,11 +1087,6 @@ void() PlayerPreThink =
 
 	TeamCapturePlayerUpdate();
 
-	if (self.CamState) {
-		if (self.CamState > CAM_BECOME)
-			CamPreThink();
-		return;
-	}
 
 	if (self.view_ofs == '0 0 0')
 		return;		// intermission or finale
@@ -1116,8 +1112,7 @@ void() PlayerPreThink =
 
 //ZOID-Observer
 	if (self.observer) {
-		if (self.CamState <= CAM_BECOME)
-			ObserverThink();
+		ObserverThink();
 		return;
 	}
 //
@@ -1342,14 +1337,6 @@ void() PlayerPostThink =
 	local	float	r;
     local   string  num;
 
-	if (self.CamState > CAM_BECOME) {
-		CamThink();
-		return;
-	}
-	if (self.CamState == CAM_BECOME) {
-		InitCamClient();
-		return;
-	}
 
 	if (self.view_ofs == '0 0 0')
 		return;		// intermission or finale
@@ -1471,9 +1458,7 @@ void() ClientDisconnect =
 	self.lastteam = -50;
 	self.team = -50;
 	self.frags = 0;
-	self.statoff = 0;
-
-	CamPlayerDisconnect();
+	self.statstate = 0;
 
 	LogMsg(self, "DISCONNECT");
 };
