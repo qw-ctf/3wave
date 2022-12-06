@@ -1,6 +1,6 @@
 Title    : Threewave QuakeWorld Capture
-Filename : 3wqw10.zip
-Version  : 1.00
+Filename : 3wqw11.zip
+Version  : 1.10
 Date     : 96-12-27
 Author   : Dave 'Zoid' Kirsch
 Email    : zoid@threewave.com
@@ -30,6 +30,10 @@ ctf7  Tale of Two Cities     Jamie Mactaggart <Maareck@msn.com>
 ctf8  The StrongBox          Brent '[Drizzt]' Mcleod <mcleod@westworld.com>
 
 The custom Skin man:  Ryan 'Grey_Ghost' Lacouture <vallore@wt.net>
+
+Thanks to Wedge an Choryoth of Quake Command for solving some of the problems
+with the QuakeWorld implementation of the grappling hook.  Check out Quake
+Command at http://www.nuc.net/quake/
 
                  +---------- The ThreeWave Web Dudes ----------+
                  |  Blake 'Coder' Winton <news@threewave.com>  |
@@ -397,6 +401,15 @@ Server Logging
 
    Windows 95/NT server operators:  use the -condebug Quake command line
    paramter to dump the log to a file.
+
+What's new in 1.10
+------------------
+
+- Some debugging messages removed (rather ugly)
+
+- Restoration of the grappling hook with a new implementation by Wedge of
+  Quake Command.  Special thanks to John Cash at id for helping find that last
+  elusive bug.
 
 What's new in 1.00
 ------------------

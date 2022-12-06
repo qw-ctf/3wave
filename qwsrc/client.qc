@@ -18,20 +18,14 @@ void() MOTD =
 		self.motd_count = self.motd_count + 1;
 		if (teamplay & TEAM_CAPTURE_FLAG)
 			if (self.steam == TEAM_COLOR1)
-				centerprint(self, "Welcome!\nRunning QuakeWorld ThreeWave CTF 3.2\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
+				centerprint(self, "Welcome!\nQuakeWorld ThreeWave CTF 1.1\n\nцаптуре тхе флаг\n\nYou are on the ред team"); //red
 			else
-				centerprint(self, "Welcome!\nRunning QuakeWorld Threewave CTF 3.2\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
+				centerprint(self, "Welcome!\nQuakeWorld ThreeWave CTF 1.1\n\nцаптуре тхе флаг\n\nYou are on the блуе team"); //blue
 		else if (teamplay)
-			centerprint(self, "Welcome!\nRunning QuakeWorld Threewave CTF 3.2\n\nTEAMPLAY IS ACTIVE");
+			centerprint(self, "Welcome!\nQuakeWorld Threewave 1.1\n\nTEAMPLAY IS ACTIVE");
 		else
-			centerprint(self, "Welcome!\nRunning QuakeWorld ThreeWave Server Mods");
+			centerprint(self, "Welcome!\nQuakeWorld ThreeWave Server Mods");
 		return;
-	} else {
-		sprint(self, PRINT_HIGH, "Info: http://quake.threewave.com/\n");
-		if (teamplay & TEAM_CAPTURE_FLAG) {
-			sprint(self, PRINT_HIGH, "You are playing\nCUSTOM цаптуре тхе флаг!\n"); // CAPTURE THE FLAG
-			sprint(self, PRINT_HIGH, "  Version QW3.2\n");
-		}
 	}
 	self.motd_time = 0;
 };
@@ -127,7 +121,7 @@ void() SetChangeParms =
 
 void() SetNewParms =
 {
-	parm1 = IT_SHOTGUN | IT_AXE;
+        parm1 = IT_SHOTGUN | IT_AXE | IT_GRAPPLE;
 	parm2 = 100;
 	if (teamplay & TEAM_CAPTURE_FLAG) {
 		parm3 = 50;
@@ -158,7 +152,7 @@ void() DecodeLevelParms =
 
 	if (serverflags)
 	{
-		if (world.model == "maps/start.bsp")
+                if (world.model == "maps/start.bsp")
 			SetNewParms ();		// take away all stuff on starting new episode
 	}
 
@@ -541,6 +535,7 @@ void() PutClientInServer =
 
 //	spot = SelectSpawnPoint ();
 
+
 	self.origin = spot.origin + '0 0 1';
 	self.angles = spot.angles;
 	self.fixangle = TRUE;		// turn this way immediately
@@ -563,6 +558,12 @@ void() PutClientInServer =
 	spawn_tfog (self.origin + v_forward*20);
 
 	spawn_tdeath (self.origin, self);
+
+
+        // grapple stuff
+        self.on_hook = FALSE;
+        self.hook_out = FALSE;
+        self.fire_held_down = FALSE;
 };
 
 
@@ -894,7 +895,7 @@ void() PlayerJump =
 		{
 			self.swim_flag = time + 1;
 			if (random() < 0.5)
-				sound (self, CHAN_BODY, "misc/water1.wav", 1, ATTN_NORM);
+                                sound (self, CHAN_BODY, "misc/water1.wav", 1, ATTN_NORM);
 			else
 				sound (self, CHAN_BODY, "misc/water2.wav", 1, ATTN_NORM);
 		}
@@ -1103,11 +1104,16 @@ void() PlayerPreThink =
 // RUNE
 
 	if(time > self.attack_finished && self.currentammo == 0 &&
-		self.weapon != IT_AXE)
+                self.weapon != IT_AXE && self.weapon != IT_GRAPPLE)
 	{
 		self.weapon = W_BestWeapon ();
 		W_SetCurrentAmmo ();
 	}
+
+        // Do grapple stuff if I'm on a hook
+        if (self.on_hook)
+                Service_Grapple ();
+
 };
 
 /*
@@ -1131,7 +1137,6 @@ void() CheckPowerups =
 			sound (self, CHAN_AUTO, "items/inv3.wav", 0.5, ATTN_IDLE);
 			self.invisible_sound = time + ((random() * 3) + 1);
 		}
-
 
 		if (self.invisible_finished < time + 3)
 		{
@@ -1338,8 +1343,6 @@ void() ClientConnect =
  	// If this is our first connection, parm10 is < 0
  	// Set lastteam negative.
  	if (parm10 < 0 || self.steam < 0) {
-dprint(self.netname);
-dprint(" assigning to team.\n");
  		self.steam = -1;
 		TeamAssign();
         if(teamplay & TEAM_LOCK_COLORS) // force a stuff cmd in think
@@ -1398,7 +1401,7 @@ void(entity targ, entity attacker) ClientObituary =
 	local float flag_radius;
 	local float flag_carrier_radius;
 
-	local	float rnum;
+        local   float rnum, temp;
 	local	string deathstring, deathstring2, s;
 	rnum = random();
 
@@ -1640,6 +1643,20 @@ void(entity targ, entity attacker) ClientObituary =
 					deathstring = " was ax-murdered by ";
 					deathstring2 = "\n";
 				}
+                                if (rnum == IT_GRAPPLE)
+				{
+                                        temp = random();
+                                        if (temp < 0.5)
+                                        {
+                                                deathstring = " was hooked by ";
+                                                deathstring2 = "\n";
+                                        }
+                                        else if (temp > 0.5)
+                                        {
+                                                deathstring = " was disemboweled by ";
+                                                deathstring2 = "\n";
+                                        }
+        			}
 				if (rnum == IT_SHOTGUN)
 				{
 					deathstring = " chewed on ";

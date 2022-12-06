@@ -1,6 +1,6 @@
-
 void() bubble_bob;
-
+void() player_chain5;
+void() player_chain4;
 /*
 ==============================================================================
 
@@ -171,6 +171,45 @@ void()	player_axed1 =	[$axattd1, player_axed2	] {self.weaponframe=5;};
 void()	player_axed2 =	[$axattd2, player_axed3	] {self.weaponframe=6;};
 void()	player_axed3 =	[$axattd3, player_axed4	] {self.weaponframe=7;W_FireAxe();};
 void()	player_axed4 =	[$axattd4, player_run	] {self.weaponframe=8;};
+
+//============================================================================
+void()  player_chain1=  [$axattd1, player_chain2 ] {self.weaponframe=2;Throw_Grapple();};
+void()  player_chain2=  [$axattd2, player_chain3 ] {self.weaponframe=3;};
+void()  player_chain3=  [$axattd3, player_chain3 ]
+{
+
+
+        self.weaponframe=3;
+        if (!self.hook_out)
+        {
+                player_chain5();
+                return;
+        }
+        if (vlen(self.velocity) >= 750)
+        {
+                player_chain4();
+                return;
+        }
+};
+
+void() player_chain4=  [$deathc4, player_chain4 ]
+{
+        self.weaponframe=4;
+        if (!self.hook_out)
+        {
+                player_chain5();
+                return;
+        }
+        if (vlen(self.velocity) < 750)
+        {
+                player_chain3();
+                return;
+        }
+};
+
+void()  player_chain5=  [$axattd4, player_run    ] {self.weaponframe=5;};
+
+//============================================================================
 
 //============================================================================
 
@@ -530,6 +569,14 @@ void() GibPlayer =
 void() PlayerDie =
 {
 	local	float	i;
+
+        // make dead guy release hook (wedge)
+        if (self.hook_out)
+        {
+                Reset_Grapple (self.hook);
+                self.attack_finished = time + 0.75;
+                self.hook_out = TRUE;// PutClientInServer will reset this
+        }
 
 	self.items = self.items - (self.items & IT_INVISIBILITY);
 	self.invisible_finished = 0;	// don't die as eyes

@@ -289,7 +289,7 @@ float	IT_SUPER_NAILGUN		= 8;
 float	IT_GRENADE_LAUNCHER		= 16;
 float	IT_ROCKET_LAUNCHER		= 32;
 float	IT_LIGHTNING			= 64;
-float	IT_EXTRA_WEAPON			= 128;
+float   IT_GRAPPLE                 = 128;
 
 float	IT_SHELLS				= 256;
 float	IT_NAILS				= 512;
@@ -461,7 +461,8 @@ float		deathmatch;
 
 .float		speed;
 
-.float	lefty;
+.float  lefty;// Monsters use this. I use it to flag the player's CHAN_WEAP
+              // to be cleared (see client.qc) -Wedge
 
 .float	search_time;
 .float	attack_state;
@@ -497,7 +498,6 @@ float	AS_MISSILE		= 4;
 
 .float 		attack_finished;
 .float		pain_finished;
-.float		hook_out;
 
 .float		invincible_finished;
 .float		invisible_finished;
@@ -607,7 +607,7 @@ float		PF_GHOST			= 64;
 .float		lip;
 .float		state;
 .vector		pos1, pos2;		// top and bottom positions
-.float		height;
+.float          height;
 
 //
 // sounds
@@ -749,5 +749,15 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage;
 float (entity e, float healamount, float ignore) T_Heal; // health function
 
 float(entity targ, entity inflictor) CanDamage;
+
+
+//
+// Grapple.qc - Wedge
+//
+.float  on_hook;// TRUE if hook is anchored and client is being pulled
+.float  hook_out;// TRUE if hook is in use
+.entity hook;// pointer to client's hook
+.float  fire_held_down;// flag - TRUE if player is still holding down the
+                       // fire button after throwing a hook.
 
 

@@ -7,6 +7,9 @@ teamplay.qc
 subs.qc
 combat.qc
 items.qc
+
+grapple.qc //Wedge
+
 weapons.qc
 
 telefrag.qc

@@ -1,5 +1,7 @@
 /*
 */
+void () player_chain1; // prototype from player.qc
+
 void (entity targ, entity inflictor, entity attacker, float damage) T_Damage;
 void () player_run;
 void(entity bomb, entity attacker, float rad, entity ignore) T_RadiusDamage;
@@ -11,8 +13,7 @@ void() PreviousWeaponCommand;
 // called by worldspawn
 void() W_Precache =
 {
-	precache_sound ("hknight/hit.wav");  // flamethrower
-
+        precache_sound ("hknight/hit.wav");  // flamethrower
 	precache_sound ("weapons/r_exp3.wav");	// new rocket explosion
 	precache_sound ("weapons/rocket1i.wav");	// spike gun
 	precache_sound ("weapons/sgun1.wav");
@@ -25,6 +26,13 @@ void() W_Precache =
 	precache_sound ("weapons/grenade.wav");	// grenade launcher
 	precache_sound ("weapons/bounce.wav");		// grenade bounce
 	precache_sound ("weapons/shotgn2.wav");	// super shotgun
+
+        //grapple sounds (wedge)
+        precache_sound ("weapons/chain1.wav");
+        precache_sound ("weapons/chain2.wav");
+        precache_sound ("weapons/chain3.wav");
+        precache_sound ("weapons/bounce2.wav");
+        precache_sound ("blob/land1.wav");
 
 	// ZOID:
 	// normally the weapon models are precached in the individual item
@@ -69,7 +77,7 @@ void() W_FireAxe =
 	}
 	else
 	{	// hit wall
-		sound (self, CHAN_WEAPON, "player/axhit2.wav", 1, ATTN_NORM);
+                sound (self, CHAN_WEAPON, "player/axhit2.wav", 1, ATTN_NORM);
 		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
 		WriteByte (MSG_BROADCAST, TE_GUNSHOT);
 		WriteCoord (MSG_BROADCAST, org_x);
@@ -621,6 +629,7 @@ void() W_FireSuperSpikes =
 	dir = aim (self, 1000);
 	launch_spike (self.origin + '0 0 16', dir);
 	newmis.touch = superspike_touch;
+	newmis.classname = "spike";
 	setmodel (newmis, "progs/s_spike.mdl");
 	setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
 	msg_entity = self;
@@ -755,6 +764,12 @@ void() W_SetCurrentAmmo =
 		self.weaponmodel = "progs/v_axe.mdl";
 		self.weaponframe = 0;
 	}
+        else if (self.weapon == IT_GRAPPLE)
+	{
+		self.currentammo = 0;
+                self.weaponmodel = "progs/v_star.mdl";
+		self.weaponframe = 0;
+	}
 	else if (self.weapon == IT_SHOTGUN)
 	{
 		self.currentammo = self.ammo_shells;
@@ -848,6 +863,9 @@ float() W_CheckNoAmmo =
 	if (self.weapon == IT_AXE)
 		return TRUE;
 
+        if (self.weapon == IT_GRAPPLE)
+		return TRUE;
+
 	self.weapon = W_BestWeapon ();
 
 	W_SetCurrentAmmo ();
@@ -882,9 +900,15 @@ void() W_Attack =
 	makevectors	(self.v_angle);			// calculate forward angle for velocity
 	self.show_hostile = time + 1;	// wake monsters up
 
+        if (self.weapon == IT_GRAPPLE && !(self.hook_out) )
+        {
+                player_chain1 ();
+                self.attack_finished = time + 0.1;
+        }
+
 	if (self.weapon == IT_AXE)
 	{
-		sound (self, CHAN_WEAPON, "weapons/ax1.wav", 1, ATTN_NORM);
+                sound (self, CHAN_WEAPON, "weapons/ax1.wav", 1, ATTN_NORM);
 		r = random();
 		if (r < 0.25)
 			player_axe1 ();
@@ -974,9 +998,29 @@ void() W_ChangeWeapon =
 	it = self.items;
 	am = 0;
 
-	if (self.impulse == 1) {
-		fl = IT_AXE;
-	} else if (self.impulse == 31) {
+        if (self.impulse == 1 && self.weapon)
+        {
+                if (self.weapon == IT_AXE)
+                {
+                        fl = IT_GRAPPLE;
+
+                        if (self.hook_out)
+                                Reset_Grapple(self.hook);
+                }
+                else if (self.weapon != IT_AXE)
+                        fl = IT_AXE;
+	}
+        else if (self.impulse == 22)
+        {
+                        fl = IT_GRAPPLE;
+                        sprint (self, PRINT_HIGH , "Grappling Hook Selected\n");
+                        if (self.hook_out)
+                                sound (self, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
+
+                        self.hook_out = FALSE;
+                        self.on_hook = FALSE;
+        }
+        else if (self.impulse == 31) {
 		fl = IT_AXE;
 	} else if (self.impulse == 2 || self.impulse == 32) {
 		fl = IT_SHOTGUN;
@@ -1029,8 +1073,10 @@ void() W_ChangeWeapon =
 //
 // set weapon, set ammo
 //
+        self.previous_weapon = self.weapon;
 	self.weapon = fl;
 	W_SetCurrentAmmo ();
+
 };
 
 /*
@@ -1075,18 +1121,25 @@ void() CycleWeaponCommand =
 {
 	local	float	it, am;
 
+        if (self.hook_out)// no changing weapons when hook is out.
+                return;
+
+
+
 	it = self.items;
 	self.impulse = 0;
 
 //McBain: save current weapon
-	self.previous_weapon = self.weapon;
+        self.previous_weapon = self.weapon;
 
 	while (1)
 	{
 		am = 0;
 
 		if (self.weapon == IT_LIGHTNING) {
-			self.weapon = IT_AXE;
+                        self.weapon = IT_GRAPPLE;
+                } else if (self.weapon == IT_GRAPPLE){
+                        self.weapon = IT_AXE;
 		} else if (self.weapon == IT_AXE) {
 			self.weapon = IT_SHOTGUN;
 			if (self.ammo_shells < 1)
@@ -1137,6 +1190,10 @@ void() CycleWeaponReverseCommand =
 {
 	local	float	it, am;
 
+        if (self.hook_out)// no changing weapons when hook is out.
+                return;
+
+
 	it = self.items;
 	self.impulse = 0;
 
@@ -1185,9 +1242,13 @@ void() CycleWeaponReverseCommand =
 		}
 		else if (self.weapon == IT_SHOTGUN)
 		{
-			self.weapon = IT_AXE;
+                        self.weapon = IT_AXE;
 		}
-		else if (self.weapon == IT_AXE)
+                else if (self.weapon == IT_AXE)
+		{
+                        self.weapon = IT_GRAPPLE;
+		}
+                else if (self.weapon == IT_GRAPPLE)
 		{
 			self.weapon = IT_LIGHTNING;
 			if (self.ammo_cells < 1)
@@ -1270,7 +1331,7 @@ void() ImpulseCommands =
 // *TEAMPLAY*
 // If we're allowed to drop items, enable impulse 20 and 21
 	else if ((teamplay & TEAM_DROP_ITEMS) && self.impulse == 20)
-		TossBackpack ();
+                TossBackpack ();
 
 	else if ((teamplay & TEAM_DROP_ITEMS) && self.impulse == 21)
 		TossWeapon ();
@@ -1351,7 +1412,7 @@ Called every frame so impulse events can be handled as well as possible
 */
 void() W_WeaponFrame =
 {
-	if (time < self.attack_finished)
+        if (time < self.attack_finished)
 		return;
 
 //ZOID: Only call ImpulseCommands() if needed!  This saves a good chunk
@@ -1362,7 +1423,7 @@ void() W_WeaponFrame =
 		ImpulseCommands ();
 
 // check for attack
-	if (self.button0)
+        if (self.button0 && !(self.fire_held_down) )
 	{
 		SuperDamageSound ();
 		W_Attack ();

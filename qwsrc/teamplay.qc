@@ -1,6 +1,4 @@
-/* teamplay.qc
-
-   From
+/*
         The Complete Enhanced Teamplay
 
    John Spickes -- jspickes@eng.umd.edu
@@ -408,8 +406,6 @@ void() TeamAssign =
 
 	if (self.steam >= 0)
 		if(TeamColorIsLegal(self.steam)) {
-dprint(ftos(self.steam));
-dprint(" is legal\n");
 			TeamSkinAssign();
 			return;
 		}
@@ -445,10 +441,6 @@ dprint(" is legal\n");
 	sprint(self, PRINT_HIGH, n);
 	sprint(self, PRINT_HIGH, " team.\n");
 
-dprint(self.netname);
-dprint(" assigned to ");
-dprint(ftos(newcolor));
-dprint("\n");
 	self.steam = newcolor;
 	TeamSkinAssign();
 };
@@ -473,9 +465,6 @@ void() TeamCheckLock =
 		if (self.player_flag & TEAM_STUFF_COLOR) {
 			self.player_flag = self.player_flag - TEAM_STUFF_COLOR;
 			s = ftos(self.steam);
-dprint("stuffcmd:  setinfo bottomcolor ");
-dprint(s);
-dprint("\n");
 			stuffcmd(self, "setinfo bottomcolor ");
 			stuffcmd(self, s);
 			stuffcmd(self, "\n");
@@ -576,9 +565,12 @@ void() TossBackpack =
 {
 	local entity 	item;
 
-	// If we don't have any ammo, return
-	if(self.currentammo <= 0)
+        // If we don't have any ammo, return (except AXE/GRAPPLE)
+        if(self.currentammo <= 0)
+        {
+                if (self.weapon != IT_AXE &&  self.weapon != IT_GRAPPLE)
 		return;
+        }
 
 	item = spawn();
 
@@ -695,6 +687,14 @@ void() TossBackpack =
 		}
 	}
 
+
+	if (!item.ammo_shells && !item.ammo_nails && !item.ammo_rockets &&
+		!item.ammo_cells) {
+		// we didn't put anything in
+		remove(item);
+		return;
+	}
+
 	item.owner = self;
 	makevectors(self.v_angle);
 
@@ -799,7 +799,7 @@ void() TossWeapon =
 	if (deathmatch != 1)
 		return;  // only in deathmatch 1
 
-	if((self.weapon == IT_AXE) || (self.weapon == IT_SHOTGUN))
+	if( (self.weapon == IT_AXE) || (self.weapon == IT_SHOTGUN) || (self.weapon == IT_GRAPPLE) )
 		return;
 
 	item = spawn();
@@ -1146,8 +1146,13 @@ void() TeamCaptureFlagThink =
 		else if (self.owner.frame >= 112 && self.owner.frame <= 118) f = f + 7;  //shotattack
 	}
 	self.origin = e.origin + '0 0 -16' - f*v + v_right * 22;
-	self.angles = e.angles + '0 0 -45';
-	setorigin (self, self.origin);
+
+        if (e.on_hook)
+                self.angles = e.angles + '-45 0 -45';
+        else if (!e.on_hook)
+                self.angles = e.angles + '0 0 -45';
+
+        setorigin (self, self.origin);
 	self.velocity = e.velocity;
 	self.nextthink = time + 0.01;
 };

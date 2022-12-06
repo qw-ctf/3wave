@@ -410,7 +410,18 @@ local vector	org;
 	other.angles = t.mangle;
 	if (other.classname == "player")
 	{
-		other.fixangle = 1;		// turn this way immediately
+                // Teleporting - detach hook (wedge)
+                if (other.weapon == IT_GRAPPLE && other.hook_out)
+                {
+                        sound (other, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
+                        other.on_hook = FALSE;
+                        other.hook_out = FALSE;
+                        other.fire_held_down = FALSE;
+                        other.weaponframe = 0;
+                        other.attack_finished = time + 0.75;// avoid instant rehook
+                }
+
+        	other.fixangle = 1;		// turn this way immediately
 		other.teleport_time = time + 0.7;
 		if (other.flags & FL_ONGROUND)
 			other.flags = other.flags - FL_ONGROUND;

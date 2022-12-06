@@ -375,6 +375,9 @@ void(float old, float new) Deathmatch_Weapon =
 {
 	local float or, nr;
 
+	if (self.weapon == IT_GRAPPLE && self.button0)
+		return; // never change if we pulled ourselves to it
+
 // change self.weapon if desired
 	or = RankForWeapon (self.weapon);
 	nr = RankForWeapon (new);
@@ -485,12 +488,12 @@ void() weapon_touch =
 
 	prevweapon = self.weapon;
 
-	Deathmatch_Weapon (old, new);
+        Deathmatch_Weapon (old, new);
 
-	if (self.weapon != prevweapon)
-		self.previous_weapon = prevweapon;
+        if (self.weapon != prevweapon)
+              self.previous_weapon = prevweapon;
 
-	W_SetCurrentAmmo();
+        W_SetCurrentAmmo();
 
 	self = stemp;
 

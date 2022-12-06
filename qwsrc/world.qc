@@ -283,9 +283,12 @@ void() worldspawn =
 	precache_model ("progs/v_rock.mdl");
 	precache_model ("progs/v_shot2.mdl");
 	precache_model ("progs/v_nail2.mdl");
-	precache_model ("progs/v_rock2.mdl");
+        precache_model ("progs/v_rock2.mdl");
+        precache_model ("progs/v_star.mdl");// precache grapple (Wedge)
+        precache_model ("progs/bit.mdl");// precache grapple (Wedge)
+        precache_model ("progs/star.mdl");// precache grapple (Wedge)
 
-	precache_model ("progs/bolt.mdl");		// for lightning gun
+        precache_model ("progs/bolt.mdl");              // for lightning gun
 	precache_model ("progs/bolt2.mdl");		// for lightning gun
 	precache_model ("progs/bolt3.mdl");		// for boss shock
 	precache_model ("progs/lavaball.mdl");	// for testing
