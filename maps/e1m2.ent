@@ -1085,46 +1085,6 @@
 "light" "200"
 }
 {
-"sounds" "0"
-"targetname" "t73"
-"wait" "-1"
-"angle" "180"
-"classname" "func_door"
-"model" "*23"
-}
-{
-"sounds" "0"
-"targetname" "t73"
-"wait" "-1"
-"angle" "0"
-"classname" "func_door"
-"model" "*24"
-}
-{
-"sounds" "0"
-"wait" "-1"
-"angle" "0"
-"targetname" "t73"
-"classname" "func_door"
-"model" "*25"
-}
-{
-"sounds" "0"
-"targetname" "t73"
-"angle" "180"
-"wait" "-1"
-"classname" "func_door"
-"model" "*26"
-}
-{
-"sounds" "3"
-"wait" "-1"
-"angle" "-2"
-"targetname" "t73"
-"classname" "func_door"
-"model" "*27"
-}
-{
 "classname" "light"
 "origin" "-96 24 360"
 "light" "100"

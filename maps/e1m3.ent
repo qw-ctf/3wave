@@ -1433,8 +1433,8 @@
 }
 {
 "classname" "info_teleport_destination"
-"origin" "1360 704 552"
-"angle" "90"
+"origin" "1609 -9 80"
+"angle" "270"
 "targetname" "t86"
 }
 {
@@ -1878,7 +1878,7 @@
 "spawnflags" "1"
 }
 {
-"classname" "item_armor1"
+"classname" "item_armor2"
 "origin" "-288 -992 48"
 }
 {
@@ -3320,8 +3320,9 @@
 
 // team2
 {
-"origin" "1360 540 -132"
+"origin" "1360 434 -132"
 "classname" "item_flag_team2"
+"angle" "90"
 }
 {
 "angle" "0"

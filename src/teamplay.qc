@@ -1,29 +1,10 @@
-/* teamplay.qc
-
-   From
-        The Complete Enhanced Teamplay
-
-   John Spickes -- jspickes@eng.umd.edu
-
-	$Id: teamplay.qc 1.17 1996/08/17 16:52:45 jspickes Exp $
-
-	$Log: teamplay.qc $
-	Revision 1.17  1996/08/17 16:52:45  jspickes
-	Fixed a problem with displaying the current team settings that could cause
-	the wrong output when teamplay was negative.  Also added code to indicate
-	when ID's silly teamplay code is being used.
-
-	Revision 1.16  1996/08/17 00:41:52  jspickes
-	Turned off strict coop by default.
-	Fixed a bug that could have caused strange behavior if TEAM_COLOR* was
-	set to -2.
-
-	Revision 1.15  1996/08/17 00:34:17  jspickes
-	Added instructions on drop-item use in current settings output.
-	Fixed a problem that would allow you to drop lots of backpacks with
-	nothing in them.
-
-*/
+/****************************************************************************
+ * ThreeWave Capture The Flag
+ ****************************************************************************
+ * Based on John Spikles Complete Enhanced Teamplay
+ ****************************************************************************
+ * Version 4.0 rewrite Mar 21, 1997
+ ****************************************************************************/
 
 /** Defs **/
 
@@ -35,10 +16,11 @@ float TEAM_STRICT_COOP =	0;	// Strict Coop
 // Allowed team colors
 // -1 indicates no color
 
-float TEAM_COLOR1       =       4;
-float TEAM_COLOR2       =       13;
-float TEAM_COLOR3       =       -1;
-float TEAM_COLOR4       =       -1;
+float TEAM_COLOR1       =       5;
+float TEAM_COLOR2       =       14;
+
+float team1shirt;
+float team2shirt;
 
 /** End of MODIFIABLE CONSTANTS **/
 
@@ -55,11 +37,9 @@ float TEAM_ARMOR_PROTECT =      2;      // No armor damage from friendly fire
 float TEAM_ATTACKER_DAMAGE =    4;      // Attacker takes damage from hitting teammates
 float TEAM_FRAG_PENALTY =       8;      // One frag penalty for killing teammate
 float TEAM_DEATH_PENALTY =      16;     // Die when you kill a teammate.
-float TEAM_LOCK_COLORS =        32;     // Allow only team colors
 float TEAM_STATIC_TEAMS =       64;     // Don't allow players to switch teams
-float TEAM_DROP_ITEMS = 	128;	// Allow players to drop packs and
-float TEAM_CAPTURE_FLAG =	256;	// Play capture the flag
-float TEAM_CAPTURE_CUSTOM = 512;	// custom models
+float TEAM_DROP_ITEMS = 		128;	// Allow players to drop packs and
+float TEAM_CAPTURE_CUSTOM = 	512;	// custom models
 float TEAM_CAPTURE_SELECT_TEAM = 1024; // team selection
 
 float TEAM_CAPTURE_CAPTURE_BONUS = 15; // what you get for capture
@@ -87,9 +67,9 @@ float TEAM_CAPTURE_FRAG_CARRIER_ASSIST_BONUS = 2; // award for fragging a flag c
 
 // radii
 
-float TEAM_CAPTURE_TARGET_PROTECT_RADIUS = 400; // the radius around an object being
+float TEAM_CAPTURE_TARGET_PROTECT_RADIUS = 550; // the radius around an object being
 // defended where a target will be worth extra frags
-float TEAM_CAPTURE_ATTACKER_PROTECT_RADIUS = 400; // the radius around an object being
+float TEAM_CAPTURE_ATTACKER_PROTECT_RADIUS = 550; // the radius around an object being
 // defended where an attacker will get extra frags when making kills
 
 // timeouts
@@ -115,6 +95,8 @@ void() W_SetCurrentAmmo;
 void() bound_other_ammo;
 void(float o, float n) Deathmatch_Weapon;
 void() BackpackTouch;
+void(entity who, string s) TeamPlayerUpdate;
+void() TeamCaptureResetUpdate;
 
 // Return a name for the color of a team
 string(float Team) GetTeamColor =
@@ -142,8 +124,8 @@ string(float Team) GetTeamColor =
 string(float Team) GetCTFTeam =
 {
 
-	if (Team == (TEAM_COLOR1 + 1)) return "“≈ƒ";
-	if (Team == (TEAM_COLOR2 + 1)) return "¬Ã’≈";
+	if (Team == TEAM_COLOR1) return "“≈ƒ";
+	if (Team == TEAM_COLOR2) return "¬Ã’≈";
 	return "";
 
 };
@@ -199,17 +181,11 @@ void() TeamPrintSettings =
 	if(teamplay & TEAM_DEATH_PENALTY)
 		sprint(self, "Death-Penalty ");
 
-	if(teamplay & TEAM_LOCK_COLORS)
-		sprint(self, "Lock-Colors ");
-
 	if(teamplay & TEAM_STATIC_TEAMS)
 		sprint(self, "Static-Teams ");
 
 	if(teamplay & TEAM_DROP_ITEMS)
 		sprint(self, "Drop-Items (Backpack Impulse 20, Weapon Impulse 21) ");
-
-	if(teamplay & TEAM_CAPTURE_FLAG)
-		sprint(self, "Capture-The-Flag ");
 
 	sprint(self, "\n");
 };
@@ -224,8 +200,9 @@ Return TRUE if the target's armor can take damage from this attacker.
 
 float(entity targ, entity inflictor, entity attacker, float damage) TeamArmorDam =
 {
-        if( teamplay < 0 )
+        if ((teamplay < 0) || gamestart)
                 return TRUE;
+
         if( (teamplay & TEAM_ARMOR_PROTECT) &&
 			(attacker.lastteam == targ.lastteam) &&
 			(attacker != targ) && (targ.lastteam > 0) )
@@ -246,13 +223,11 @@ Return TRUE if the target can take health damage from this attacker.
 
 float(entity targ, entity inflictor, entity attacker, float damage) TeamHealthDam =
 {
-        if( teamplay < 0 )
-        {
+        if ((teamplay < 0) || gamestart)
                 return TRUE;
-        }
+
         if( (attacker.lastteam == targ.lastteam) &&
-			(attacker != targ) && (targ.lastteam > 0) )
-        {
+			(attacker != targ) && (targ.lastteam > 0) ) {
                 // Attacker and target are on the same team.
                 if( teamplay & TEAM_ATTACKER_DAMAGE )
                 {
@@ -360,17 +335,30 @@ float(float color) TeamColorIsLegal =
         // All colors are legal if teamplay is negative.
         if( teamplay < 0 )
                 return TRUE;
-        // All colors are legal if TEAM_LOCK_COLORS is off.
-        if( !(teamplay & TEAM_LOCK_COLORS) )
-                return TRUE;
         if( (color == TEAM_COLOR1) && (TEAM_COLOR1 >= 0) )
                 return TRUE;
         if( (color == TEAM_COLOR2) && (TEAM_COLOR2 >= 0) )
                 return TRUE;
-        if( (color == TEAM_COLOR3) && (TEAM_COLOR3 >= 0) )
-                return TRUE;
-        if( (color == TEAM_COLOR4) && (TEAM_COLOR4 >= 0) )
-                return TRUE;
+};
+
+float(float t) TeamGetShirt =
+{
+	if (t == TEAM_COLOR1) {
+		team1shirt = team1shirt + 1;
+		if (team1shirt > 14)
+			team1shirt = 0;
+		if (team1shirt == TEAM_COLOR2)
+			team1shirt = team2shirt + 1;
+		return team1shirt;
+	} else { // color2
+		team2shirt = team2shirt + 1;
+		if (team2shirt > 14)
+			team2shirt = 0;
+		if (team2shirt == TEAM_COLOR1)
+			team2shirt = team1shirt + 1;
+		return team2shirt;
+	}
+	return t - 1;
 };
 
 /*
@@ -384,8 +372,6 @@ void() TeamCheckTeam =
 {
 	local float TEAM1;
 	local float TEAM2;
-	local float TEAM3;
-	local float TEAM4;
 
 	local float newcolor;
 	local float t;
@@ -396,7 +382,7 @@ void() TeamCheckTeam =
 
 	if( self.lastteam >= 0 )
 	{
-			if(TeamColorIsLegal(self.team - 1)) {
+			if(TeamColorIsLegal(self.team)) {
 				self.lastteam = self.team;
 				return;
 			}
@@ -408,84 +394,38 @@ void() TeamCheckTeam =
 
 	TEAM1 = 0;
 	TEAM2 = 0;
-	TEAM3 = 0;
-	TEAM4 = 0;
 
 	p = find (world, classname, "player");
 
 	while(p)
 	{
 		if (p != self) {
-			if( (TEAM_COLOR1 >= 0) && (p.team == (TEAM_COLOR1 +1)) )
-					TEAM1 = TEAM1 + 1;
-			if( (TEAM_COLOR2 >= 0) && (p.team == (TEAM_COLOR2 +1)) )
-					TEAM2 = TEAM2 + 1;
-			if( (TEAM_COLOR3 >= 0) && (p.team == (TEAM_COLOR3 +1)) )
-					TEAM3 = TEAM3 + 1;
-			if( (TEAM_COLOR4 >= 0) && (p.team == (TEAM_COLOR4 +1)) )
-					TEAM4 = TEAM4 + 1;
+			if (p.team == TEAM_COLOR1)
+				TEAM1 = TEAM1 + 1;
+			else if (p.team == TEAM_COLOR2)
+				TEAM2 = TEAM2 + 1;
 		}
 		p = find(p, classname, "player");
 	}
 
 	// Find the team with the least players.
 	newcolor = TEAM_COLOR1;
-	t = TEAM1;
-
-	if ( (TEAM_COLOR2 >= 0) && ((TEAM2 < t) || (TEAM2 == t && random() < 0.5))) {
-			newcolor = TEAM_COLOR2;
-			t = TEAM2;
-	}
-
-	if ( (TEAM_COLOR3 >= 0) && ((TEAM3 < t) || (TEAM2 == t && random() < 0.5))) {
-			newcolor = TEAM_COLOR3;
-			t = TEAM3;
-	}
-
-	if ( (TEAM_COLOR4 >= 0) && ((TEAM4 < t) || (TEAM2 == t && random() < 0.5))) {
-			newcolor = TEAM_COLOR4;
-			t = TEAM4;
-	}
+	if (((TEAM2 < TEAM1) || (TEAM2 == TEAM1 && random() < 0.5)))
+		newcolor = TEAM_COLOR2;
 
 	// Put the player on a the new team.
 
-	n = ftos(newcolor);
 	stuffcmd(self, "color ");
+	t = TeamGetShirt(newcolor);
+	n = ftos(t);
+	stuffcmd(self, n);
+	stuffcmd(self, " ");
+	n = ftos(newcolor - 1);
 	stuffcmd(self, n);
 	stuffcmd(self, "\n");
 
-	sprint(self, "You have been assigned color ");
-	sprint(self, n);
-	sprint(self, "\nLegal colors are:");
-	if(TEAM_COLOR1 >= 0)
-	{
-			n = ftos(TEAM_COLOR1);
-			sprint(self, " ");
-			sprint(self, n);
-	}
-	if(TEAM_COLOR2 >= 0)
-	{
-			n = ftos(TEAM_COLOR2);
-			sprint(self, " ");
-			sprint(self, n);
-	}
-	if(TEAM_COLOR3 >= 0)
-	{
-			n = ftos(TEAM_COLOR3);
-			sprint(self, " ");
-			sprint(self, n);
-	}
-	if(TEAM_COLOR4 >= 0)
-	{
-			n = ftos(TEAM_COLOR4);
-			sprint(self, " ");
-			sprint(self, n);
-	}
-
-	sprint(self, "\n");
-
-	self.lastteam = newcolor + 1;      // Remember what team we're on
-	self.team = newcolor + 1;
+	self.lastteam = newcolor;      // Remember what team we're on
+	self.team = newcolor;
 };
 
 /*
@@ -497,93 +437,96 @@ Check for team changing and perform whatever actions are neccessary.
 */
 void() TeamCheckLock =
 {
-        local   float   n;
-        local   string  s;
+	local   float   n;
+	local   string  s;
 
-        // Don't do anything if teamplay is negative
-        if ( teamplay < 0 )
-                return;
-
-		if (self.observer || self.do_observer) {
-			if (self.team != 1)
-				stuffcmd(self, "color 0\n");
+	// Don't do anything if teamplay is negative
+	if ( teamplay < 0 )
 			return;
-		}
 
-		if (self.player_flag & TEAM_STUFF_COLOR) {
-			self.player_flag = self.player_flag - TEAM_STUFF_COLOR;
-			stuffcmd(self, "color ");
-			n = self.lastteam - 1;
-			s = ftos(n);
-			stuffcmd(self, s);
-			stuffcmd(self, "\n");
-			return;
-		}
+	if (self.observer || self.do_observer || gamestart) {
+		if (self.team != 1)
+			stuffcmd(self, "color 0\n");
+		self.lastteam = 1;
+		return;
+	}
 
-        if ( !TeamColorIsLegal(self.team - 1) && (self.team == self.lastteam)) {
-			self.lastteam = -1;
-		}
+	if (self.player_flag & TEAM_STUFF_COLOR) {
+		self.player_flag = self.player_flag - TEAM_STUFF_COLOR;
+		stuffcmd(self, "color ");
+		n = TeamGetShirt(self.lastteam);
+		s = ftos(n);
+		stuffcmd(self, s);
+		stuffcmd(self, " ");
+		n = self.lastteam - 1;
+		s = ftos(n);
+		stuffcmd(self, s);
+		stuffcmd(self, "\n");
+		return;
+	}
 
-        // Check to see if the player has changed colors
-        if (self.team != self.lastteam)
-        {
-                // Player has changed colors
+	if ( !TeamColorIsLegal(self.team) && (self.team == self.lastteam)) {
+		self.lastteam = -1;
+	}
 
-                // If teams are static and we've been on some team already,
-                // put us back on the team we were on.
+	// Check to see if the player has changed colors
+	if (self.team != self.lastteam)
+	{
+		// Player has changed colors
 
-                if ( (teamplay & TEAM_STATIC_TEAMS) && (self.lastteam >= 0) )
-                {
-                        if ( TeamColorIsLegal(self.lastteam - 1) )
-                        {
-								// changing teams sucks, kill him
+		// If teams are static and we've been on some team already,
+		// put us back on the team we were on.
 
-								// if he has tried to change teams several
-								// times, kick him off the server.
-								if (self.suicide_count > 3) {
-									sprint(self, "You were told you can't change teams.\nGo play color games somewhere else.\n");
-									stuffcmd(self, "disconnect\n");
-									bprint(self.netname);
-									bprint(" has bad color sense\n");
-								}
-								// case base respawn
-								if (self.killed != 1)
-									self.killed = 2;
-								T_Damage(self,self,self,1000);  // Kill the player
-								// trying to change teams counts as a suicide
-								self.suicide_count = self.suicide_count + 1;
+		if ( (teamplay & TEAM_STATIC_TEAMS) && (self.lastteam >= 0) )
+		{
+			if ( TeamColorIsLegal(self.lastteam) )
+			{
+				// changing teams sucks, kill him
 
-                                sprint(self, "You cannot change teams.\n");
-                                stuffcmd(self, "color ");
-                                n = self.lastteam - 1;
-                                s = ftos(n);
-                                stuffcmd(self, s);
-                                stuffcmd(self, "\n");
-								self.team = self.lastteam;
-                                return;
-                        }
-                        else {
-                                // If we're on an illegal team, force a change.
-                                self.lastteam = -50;
-						}
-                }
-
-                // If teamlock is turned off, don't do anything more.
-                if ( !(teamplay & TEAM_LOCK_COLORS) )
-                {
-						self.lastteam = self.team;
-                        return;
-                }
-
-                if(self.lastteam > 0) {
-					// case base respawn
-					if (self.killed != 1)
-						self.killed = 2;
-					T_Damage(self,self,self,1000);  // Kill the player
+				// if he has tried to change teams several
+				// times, kick him off the server.
+				if (self.suicide_count > 3) {
+					sprint(self, "You were told you can't change teams.\nGo play color games somewhere else.\n");
+					stuffcmd(self, "disconnect\n");
+					bprint(self.netname);
+					bprint(" has bad color sense\n");
 				}
-                self.frags = 0;                 // Zero out frags
-                TeamCheckTeam();
-        }
+				// case base respawn
+				if (self.killed != 1)
+					self.killed = 2;
+				self.invincible_finished = 0;
+				T_Damage(self,self,self,1000);  // Kill the player
+				// trying to change teams counts as a suicide
+				self.suicide_count = self.suicide_count + 1;
+
+				sprint(self, "You cannot change teams.\n");
+				stuffcmd(self, "color ");
+				n = TeamGetShirt(self.lastteam);
+				s = ftos(n);
+				stuffcmd(self, s);
+				stuffcmd(self, " ");
+				n = self.lastteam - 1;
+				s = ftos(n);
+				stuffcmd(self, s);
+				stuffcmd(self, "\n");
+				self.team = self.lastteam;
+				return;
+			}
+			else {
+				// If we're on an illegal team, force a change.
+				self.lastteam = -50;
+			}
+		}
+
+		if(self.lastteam > 0) {
+			// case base respawn
+			if (self.killed != 1)
+				self.killed = 2;
+			T_Damage(self,self,self,1000);  // Kill the player
+		}
+		self.frags = 0;                 // Zero out frags
+		TeamCheckTeam();
+	}
 };
 
 /*
@@ -921,9 +864,9 @@ void(entity flg) TeamCaptureReturnFlag =
 	p = find(world, classname, "player");
 	while (p != world) {
 		if (p.team != flg.team)
-			centerprint(p, "Enemy flag has been returned to base!\n");
+			TeamPlayerUpdate(p, "Enemy flag has been returned to base!");
 		else if (p.team == flg.team)
-			centerprint(p, "Your flag has been returned to base!\n");
+			TeamPlayerUpdate(p, "Your flag has been returned to base!");
 		p = find(p, classname, "player");
 	}
 };
@@ -948,7 +891,7 @@ void(entity flg) TeamDropFlag =
 	p = flg.owner;
 
 	bprint(p.netname);
-	if (p.lastteam == TEAM_COLOR1 + 1)
+	if (p.lastteam == TEAM_COLOR1)
 		bprint(" ÏÔÛÙ the ¬Ã’≈ flag!\n"); // blue
 	else
 		bprint(" ÏÔÛÙ the “≈ƒ flag!\n"); // red
@@ -979,7 +922,7 @@ void(entity player) TeamCaptureDropFlagOfPlayer =
 
 	if (!(player.player_flag & ITEM_ENEMY_FLAG))
 		return;
-	if (player.lastteam == TEAM_COLOR1 + 1)
+	if (player.lastteam == TEAM_COLOR1)
 		kn = "item_flag_team2";
 	else
 		kn = "item_flag_team1";
@@ -1001,7 +944,7 @@ void() TeamCaptureFlagTouch =
 	if (other.team != other.lastteam)
 		return; // something is fishy, somebody is playing with colors
 
-	if (self.team == other.team) {
+	if (self.lastteam == other.lastteam) {
 		// same team, if the flag is *not* at the base, return
 		// it to base.  we overload the 'cnt' field for this
 		if (self.cnt == FLAG_AT_BASE) {
@@ -1010,7 +953,7 @@ void() TeamCaptureFlagTouch =
 
 			if (other.player_flag & ITEM_ENEMY_FLAG) {
 				bprint(other.netname);
-				if (other.team == TEAM_COLOR1 + 1)
+				if (other.team == TEAM_COLOR1)
 					bprint(" „·ÙıÚÂ‰ the ¬Ã’≈ flag!\n"); // blue
 				else
 					bprint(" „·ÙıÚÂ‰ the “≈ƒ flag!\n"); // red
@@ -1030,19 +973,16 @@ void() TeamCaptureFlagTouch =
 				while (p != world) {
 					self = p;
 					self.killed = 0;
-					if (self.team == other.team && self != other)
+					if (self.lastteam == other.lastteam && self != other)
 						self.frags = self.frags + TEAM_CAPTURE_TEAM_BONUS;
-					if (self.team != other.team) {
-						centerprint(self, "Your flag was captured!\n");
+					if (self.lastteam != other.lastteam) {
 						// *XXX* EXPERT CTF
 						// reset the last_hurt_carrier variable in all enemy players, so that you don't get
 						// bonuses for defending the flag carrier if the flag carrier has already
 						// completed a capture
 						self.last_hurt_carrier = -5;
-					} else if (self.team == other.team) {
+					} else if (self.lastteam == other.lastteam) {
 						// done to all players on the capturing team
-						centerprint(self, "Your team captured the flag!\n");
-
 						// *XXX* EXPERT CTF
 
 						// award extra points for capture assists
@@ -1061,6 +1001,18 @@ void() TeamCaptureFlagTouch =
 
 					p = find(p, classname, "player");
 				}
+
+				TeamCaptureResetUpdate();
+
+				p = find(world, classname, "player");
+				while (p != world) {
+					if ((p.lastteam == TEAM_COLOR1 && other.lastteam == TEAM_COLOR2) ||
+						(p.lastteam == TEAM_COLOR2 && other.lastteam == TEAM_COLOR1))
+						TeamPlayerUpdate(p, "Your flag was captured!");
+					else if (p.lastteam == other.lastteam)
+						TeamPlayerUpdate(p, "Your team captured the flag!");
+					p = find(p, classname, "player");
+				}
 				// respawn flags
 				TeamCaptureRegenFlags();
 				return;
@@ -1069,7 +1021,7 @@ void() TeamCaptureFlagTouch =
 		}
 		// hey, its not home.  return it by teleporting it back
 		bprint(other.netname);
-		if (other.team == TEAM_COLOR1 + 1)
+		if (other.team == TEAM_COLOR1)
 			bprint(" ÚÂÙıÚÓÂ‰ the “≈ƒ flag!\n"); // red
 		else
 			bprint(" ÚÂÙıÚÓÂ‰ the ¬Ã’≈ flag!\n"); // blue
@@ -1084,15 +1036,15 @@ void() TeamCaptureFlagTouch =
 
 	// hey, its not our flag, pick it up
 	bprint(other.netname);
-	if (other.team == TEAM_COLOR1 + 1)
+	if (other.team == TEAM_COLOR1)
 		bprint(" ÁÔÙ the ¬Ã’≈ flag!\n"); // blue
 	else
 		bprint(" ÁÔÙ the “≈ƒ flag!\n"); // red
 	LogMsg(other, "FLAG-PICKUP");
 	if (TEAM_CAPTURE_FLAG_BONUS)
 		other.frags = other.frags + TEAM_CAPTURE_FLAG_BONUS;
-//	centerprint(other, "YOU GOT THE ENEMY FLAG!\n\nRETURN TO BASE!\n");
-	centerprint(other, "Ÿœ’ «œ‘ ‘»≈ ≈Œ≈ÕŸ ∆Ã¡«\n\n“≈‘’“Œ ‘œ ¬¡”≈\n");
+//	TeamPlayerUpdate(other, "YOU GOT THE ENEMY FLAG!  RETURN TO BASE!");
+	TeamPlayerUpdate(other, "Ÿœ’ «œ‘ ‘»≈ ≈Œ≈ÕŸ ∆Ã¡«  “≈‘’“Œ ‘œ ¬¡”≈");
 	sound (other, CHAN_ITEM, self.noise, 1, ATTN_NORM);
 
 	other.player_flag = other.player_flag + ITEM_ENEMY_FLAG;
@@ -1110,10 +1062,11 @@ void() TeamCaptureFlagTouch =
 	p = find(world, classname, "player");
 	while (p != world) {
 		if (p != other) {
-			if (p.team != other.team)
-				centerprint(p, "Your flag has been taken!\n");
+			if ((p.team == TEAM_COLOR1 && other.team == TEAM_COLOR2) ||
+				(p.team == TEAM_COLOR2 && other.team == TEAM_COLOR1))
+				TeamPlayerUpdate(p, "Your flag has been taken!");
 			else if (p.team == other.team)
-				centerprint(p, "Your team has the enemy flag!\n");
+				TeamPlayerUpdate(p, "Your team has the enemy flag!");
 		}
 		p = find(p, classname, "player");
 	}
@@ -1194,16 +1147,12 @@ void() TeamCaptureFlagThink =
 // self is player
 entity() TeamCaptureSpawn =
 {
-
-	if (!(teamplay & TEAM_CAPTURE_FLAG))
-		return world;
-
-	if (self.team == TEAM_COLOR1 + 1) {
+	if (self.team == TEAM_COLOR1) {
 		team1_lastspawn = find(team1_lastspawn, classname, "info_player_team1");
 		if (team1_lastspawn == world)
 			team1_lastspawn = find(team1_lastspawn, classname, "info_player_team1");
 		return team1_lastspawn;
-	} else if (self.team == TEAM_COLOR2 + 1) {
+	} else if (self.team == TEAM_COLOR2) {
 		team2_lastspawn = find(team2_lastspawn, classname, "info_player_team2");
 		if (team2_lastspawn == world)
 			team2_lastspawn = find(team2_lastspawn, classname, "info_player_team2");
@@ -1233,17 +1182,12 @@ void() TeamFlagStatusReport =
 {
 	local entity flag1, flag2, p;
 
-	if (!(teamplay & TEAM_CAPTURE_FLAG)) {
-		sprint(self, "Capture the Flag is not enabled.\n");
-		return;
-	}
-
 	// Find the flags at home base
 	flag1 = find (world,classname, "item_flag_team1");
 	flag2 = find (world,classname, "item_flag_team2");
 
 	// If on team 2 switch meanings of flags
-	if (self.team != TEAM_COLOR1 + 1) {
+	if (self.team != TEAM_COLOR1) {
 		p = flag1;
 		flag1 = flag2;
 		flag2 = p;
@@ -1316,12 +1260,8 @@ void() place_flag = {
 // ZOID Capture the flag
 void() item_flag_team1 =
 {
-	if (!deathmatch || !(cvar("teamplay") & TEAM_CAPTURE_FLAG)) {
-		remove(self);
-		return;
-	}
-
-	self.team = TEAM_COLOR1 + 1;
+	self.team = TEAM_COLOR1;
+	self.lastteam = TEAM_COLOR1;
 	self.items = IT_KEY2;
 	if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM) {
 		precache_model ("progs/flag.mdl");
@@ -1341,6 +1281,7 @@ void() item_flag_team1 =
 		precache_sound ("doors/runetry.wav");
 		self.noise = "misc/medkey.wav";
 		self.noise1 = "doors/runetry.wav";
+		self.origin_z = self.origin_z + 24;
 		setsize(self, '-16 -16 -24', '16 16 32');
 	}
 	self.nextthink = time + 0.2;	// items start after other solids
@@ -1349,12 +1290,8 @@ void() item_flag_team1 =
 
 void() item_flag_team2 =
 {
-	if (!deathmatch || !(cvar("teamplay") & TEAM_CAPTURE_FLAG)) {
-		remove(self);
-		return;
-	}
-
-	self.team = TEAM_COLOR2 + 1;
+	self.team = TEAM_COLOR2;
+	self.lastteam = TEAM_COLOR2;
 	self.items = IT_KEY1;
 	if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM) {
 		precache_model ("progs/flag.mdl");
@@ -1374,6 +1311,7 @@ void() item_flag_team2 =
 		precache_sound ("doors/runetry.wav");
 		self.noise = "misc/medkey.wav";
 		self.noise1 = "doors/runetry.wav";
+		self.origin_z = self.origin_z + 24;
 		setsize(self, '-16 -16 -24', '16 16 32');
 	}
 	// make it glow
@@ -1381,50 +1319,6 @@ void() item_flag_team2 =
 	self.think = place_flag;
 };
 
-void() TeamCaptureSetUpdate =
-{
-	nextteamupdtime = time + TEAM_CAPTURE_UPDATE_TIME;
-};
-
-void() TeamCaptureCheckUpdate =
-{
-	local float total1, total2;
-	local entity p;
-	local string s;
-
-	if (nextteamupdtime > time || !(teamplay & TEAM_CAPTURE_FLAG))
-		return;
-
-	TeamCaptureSetUpdate();
-
-	// count up total
-	total1 = total2 = 0;
-	p = find(world, classname, "player");
-	while (p != world) {
-		if (p.lastteam == TEAM_COLOR1 + 1)
-			total1 = total1 + p.frags;
-		else if (p.lastteam == TEAM_COLOR2 + 1)
-			total2 = total2 + p.frags;
-		p = find(p, classname, "player");
-	}
-
-	if (total1 > total2) {
-		bprint("“≈ƒ team is leading by ");
-		s = ftos(total1 - total2);
-		bprint(s);
-		bprint(" points!\n");
-	} else if (total1 < total2) {
-		bprint("¬Ã’≈ team is leading by ");
-		s = ftos(total2 - total1);
-		bprint(s);
-		bprint(" points!\n");
-	} else {
-		bprint("¬Ã’≈ and “≈ƒ team are tied with ");
-		s = ftos(total1);
-		bprint(s);
-		bprint(" points!\n");
-	}
-};
 
 /*QUAKED func_ctf_wall (0 .5 .8) ?
 This is just a solid wall if not inhibitted
@@ -1432,12 +1326,9 @@ Only appears in CTF teamplay
 */
 void() func_ctf_wall =
 {
-	if (cvar("teamplay") & TEAM_CAPTURE_FLAG) {
-		self.angles = '0 0 0';
-		self.movetype = MOVETYPE_PUSH;	// so it doesn't get pushed by anything
-		self.solid = SOLID_BSP;
-		setmodel (self, self.model);
-	} else
-		remove(self);
+	self.angles = '0 0 0';
+	self.movetype = MOVETYPE_PUSH;	// so it doesn't get pushed by anything
+	self.solid = SOLID_BSP;
+	setmodel (self, self.model);
 };
 

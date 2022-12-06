@@ -362,6 +362,7 @@ void() spikeshooter_use =
 {
 	if (self.spawnflags & SPAWNFLAG_LASER)
 	{
+		return;
 		sound (self, CHAN_VOICE, "enforcer/enfire.wav", 1, ATTN_NORM);
 		LaunchLaser (self.origin, self.movedir);
 	}
@@ -570,6 +571,9 @@ This is just a solid wall if not inhibitted
 */
 void() func_wall =
 {
+	if (gamestart && self.model == "*47")
+		return; // remove deathmatch only wall on start map
+
 	self.angles = '0 0 0';
 	self.movetype = MOVETYPE_PUSH;	// so it doesn't get pushed by anything
 	self.solid = SOLID_BSP;
@@ -613,7 +617,7 @@ This bmodel appears unless players have all of the episode sigils.
 void() func_bossgate =
 
 {
-	if ( (serverflags & 15) == 15)
+	if ( (serverflags & 15) == 15 || gamestart)
 		return;		// all episodes completed
 	self.angles = '0 0 0';
 	self.movetype = MOVETYPE_PUSH;	// so it doesn't get pushed by anything

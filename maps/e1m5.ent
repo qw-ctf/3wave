@@ -835,36 +835,36 @@
 "origin" "-988 872 380"
 "classname" "light"
 }
-{
-"classname" "trigger_teleport"
-"target" "t45"
-"spawnflags" "1"
-"model" "*28"
-}
-{
-"classname" "info_teleport_destination"
-"origin" "-984 852 328"
-"angle" "270"
-"targetname" "t46"
-}
-{
-"classname" "info_teleport_destination"
-"origin" "704 1520 4"
-"angle" "90"
-"targetname" "t45"
-}
-{
-"classname" "trigger_teleport"
-"target" "t45"
-"spawnflags" "1"
-"model" "*29"
-}
-{
-"classname" "trigger_teleport"
-"target" "t46"
-"spawnflags" "1"
-"model" "*30"
-}
+//{
+//"classname" "trigger_teleport"
+//"target" "t45"
+//"spawnflags" "1"
+//"model" "*28"
+//}
+//{
+//"classname" "info_teleport_destination"
+//"origin" "-984 852 328"
+//"angle" "270"
+//"targetname" "t46"
+//}
+//{
+//"classname" "info_teleport_destination"
+//"origin" "704 1520 4"
+//"angle" "90"
+//"targetname" "t45"
+//}
+//{
+//"classname" "trigger_teleport"
+//"target" "t45"
+//"spawnflags" "1"
+//"model" "*29"
+//}
+//{
+//"classname" "trigger_teleport"
+//"target" "t46"
+//"spawnflags" "1"
+//"model" "*30"
+//}
 {
 "origin" "256 1832 104"
 "classname" "light_flame_small_yellow"
@@ -1649,8 +1649,8 @@
 }
 {
 "classname" "info_teleport_destination"
-"origin" "-544 1348 -32"
-"angle" "90"
+"origin" "-545 1825 344"                        //Q-Man
+"angle" "270"
 "targetname" "t115"
 }
 {
@@ -2773,8 +2773,8 @@
 "classname" "monster_shambler"
 }
 {
-"classname" "item_armor2"
-"origin" "-1536 2072 128"
+"classname" "item_armorInv"     //Q-Man
+"origin" "-1536 2080 128"
 "spawnflags" "1792"
 }
 {
@@ -2859,8 +2859,9 @@
 "spawnflags" "2048"
 }
 {
-"classname" "item_armor1"
-"origin" "-544 1736 -264"
+"classname" "item_health"
+"origin" "-560 1732 -240"
+"spawnflags" "2"                //Q-Man
 }
 {
 "spawnflags" "2816"
@@ -2971,180 +2972,84 @@
 "classname" "ambient_swamp1"
 "origin" "-486 322 120"
 }
-////////////////////////////////////////////////////////////////////////
-// Capture the flag map mods
-//
-
-// capture spawns
-// team1
+//Q-Man
 {
-"origin" "-576 176 190"
 "classname" "item_flag_team1"
+"origin" "704 1616 20"
 }
 {
-"angle" "90"
-"origin" "-526 376 175"
 "classname" "info_player_team1"
+"origin" "706 1681 20"
 }
 {
-"angle" "90"
-"origin" "-526 276 171"
 "classname" "info_player_team1"
-}
-{
+"origin" "704 1528 20"
 "angle" "90"
-"origin" "-526 176 171"
-"classname" "info_player_team1"
 }
 {
-"angle" "90"
-"origin" "-626 376 175"
 "classname" "info_player_team1"
+"origin" "500 1811 16"
 }
 {
-"angle" "90"
-"origin" "-626 276 171"
 "classname" "info_player_team1"
+"origin" "533 1421 16"
 }
 {
-"angle" "90"
-"origin" "-626 176 171"
 "classname" "info_player_team1"
+"origin" "297 1834 16"
 }
-
-// team2
 {
-"origin" "526 2264 284"
+"classname" "info_player_team1"
+"origin" "121 1620 16"
+"angle" "180"
+}
+{
 "classname" "item_flag_team2"
+"origin" "313 2543 424"
 }
 {
-"angle" "180"
-"origin" "236 2164 264"
 "classname" "info_player_team2"
+"origin" "339 2455 424"
 }
 {
-"angle" "180"
-"origin" "236 2264 264"
 "classname" "info_player_team2"
+"origin" "339 2643 424"
 }
 {
-"angle" "180"
-"origin" "236 2364 264"
 "classname" "info_player_team2"
+"origin" "141 2561 424"
 }
 {
-"angle" "180"
-"origin" "136 2164 264"
 "classname" "info_player_team2"
+"origin" "-127 2551 344"
 }
 {
-"angle" "180"
-"origin" "136 2264 264"
 "classname" "info_player_team2"
+"origin" "-42 2214 264"
 }
 {
-"angle" "180"
-"origin" "236 2364 264"
 "classname" "info_player_team2"
+"origin" "189 2263 264"
 }
-
-// base one weapons upgrade
-//{
-//"classname" "item_health"
-//"origin" "-488 2064 1220"
-//}
-//{
-//"origin" "-488 2112 1220"
-//"classname" "item_health"
-//}
-//{
-//"classname" "item_health"
-//"origin" "-488 2160 1220"
-//}
-//{
-//"origin" "-72 2064 1220"
-//"classname" "item_shells"
-//}
-//{
-//"origin" "-120 2064 1220"
-//"classname" "item_shells"
-//}
-//{
-//"origin" "-168 2064 1220"
-//"classname" "item_shells"
-//}
-//{
-//"origin" "-72 2112 1220"
-//"classname" "item_spikes"
-//}
-//{
-//"origin" "-120 2112 1220"
-//"classname" "item_spikes"
-//}
-//{
-//"origin" "-168 2112 1220"
-//"classname" "item_spikes"
-//}
-//{
-//"origin" "-72 2160 1220"
-//"classname" "weapon_supershotgun"
-//}
-//{
-//"origin" "-120 2160 1220"
-//"classname" "item_armor2"
-//}
-//{
-//"origin" "-168 2160 1220"
-//"classname" "weapon_supernailgun"
-//}
-//
-//// base two weapons upgrade
-//{
-//"classname" "item_shells"
-//"origin" "1240 768 1384"
-//}
-//{
-//"classname" "item_shells"
-//"origin" "1192 768 1384"
-//}
-//{
-//"classname" "item_shells"
-//"origin" "1144 768 1384"
-//}
-//{
-//"classname" "item_spikes"
-//"origin" "1240 816 1384"
-//}
-//{
-//"classname" "item_spikes"
-//"origin" "1192 816 1384"
-//}
-//{
-//"classname" "item_spikes"
-//"origin" "1144 816 1384"
-//}
-//{
-//"origin" "1240 864 1384"
-//"classname" "weapon_supershotgun"
-//}
-//{
-//"classname" "item_armor2"
-//"origin" "1192 864 1384"
-//}
-//{
-//"classname" "weapon_supernailgun"
-//"origin" "1144 864 1384"
-//}
-//{
-//"origin" "1240 912 1384"
-//"classname" "item_health"
-//}
-//{
-//"classname" "item_health"
-//"origin" "1192 912 1384"
-//}
-//{
-//"classname" "item_health"
-//"origin" "1144 912 1384"
-//}
-// end
+{
+"classname" "item_rockets"
+"origin" "-662 236 171"
+"spawnflags" "1"
+}
+{
+"classname" "weapon_supershotgun"
+"origin" "881 1769 16"
+}
+{
+"classname" "weapon_supernailgun"
+"origin" "704 1872 16"
+}
+{
+"classname" "item_spikes"
+"origin" "704 1920 16"
+"spawnflags" "1"
+}
+{
+"classname" "weapon_supershotgun"
+"origin" "-264 2547 424"
+}

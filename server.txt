@@ -1,10 +1,17 @@
 Title    : Threewave Capture
-Filename : 3wave35.zip
-Version  : 3.50
-Date     : 96-12-27
+Filename : 3wave40.zip
+Version  : 4.00
+Date     : 97-04-12
 Author   : Dave 'Zoid' Kirsch
 Email    : zoid@threewave.com
+Info	 : This patch contains two versions of CTF4, for Regular Quake (1.06
+	       or later) and QuakeWorld 1.55 or later.  Note that you need qwsv
+           1.55 and qwcl 1.55 or later in order to play.
+
 Credits  :
+
+CTF3 credits
+--------------
 
 John Spickes aka Guru <jspickes@eng.umd.edu> for JTEAM
 Aegis - moral support and general overexcited Quake guy
@@ -18,6 +25,8 @@ Kevin "Trojan[CampQ]" Hodgson <kevin@caseware.com> for modifing e4m5.
 Byron "Wonko" Long <byron@caseware.com> for adding Flag Status reports
   via impulse 23.
 Michael "McBain" Peckman for the PreviousWeaponCommand (impulse 69)
+Charles Kendrick <zillion@leland.stanford.edu> for Expert CTF mods for flag
+  defense and assist bonuses.
 
 The level editing team for the 3.0 custom release:
 ctf1  McKinley Base          Dave 'Zoid' Kirsch <zoid@threewave.com>
@@ -28,6 +37,9 @@ ctf5  Da Ancient War Grounds Matthew 'DaBug' Hooper <junebug@linknet.net>
 ctf6  Vertigo                Dale 'Midiguy' B. <midiguy@crl.com>
 ctf7  Tale of Two Cities     Jamie Mactaggart <Maareck@msn.com>
 ctf8  The StrongBox          Brent '[Drizzt]' Mcleod <mcleod@westworld.com>
+
+Special thanks to all the map authors for their contributions.
+
 
 The custom Skin man:  Ryan 'Grey_Ghost' Lacouture <vallore@wt.net>
 
@@ -45,6 +57,44 @@ The custom Skin man:  Ryan 'Grey_Ghost' Lacouture <vallore@wt.net>
                        For his work on the Team Logo textures
                                And the Flag models
 
+CTF4 Credits
+------------
+
+The level editing team for the 4.0 custom release:
+ctfstart Introduction          John Romero <romero@ionstorm.com>
+                               Additional CTF exits by Dave 'Zoid' Kirsch
+                               <zoid@threewave.com>
+ctf2m1   McKinley Station      Dave 'Zoid' Kirsch <zoid@threewave.com>
+ctf2m2   The Warzone           John 'Tattoo' Schultz <tattoo@enteract.com>
+ctf2m3   Spill the Blood       Dale 'midiguy' Bertheola <midiguy@crl.com>
+ctf2m4   Ruins of NeoMinonk    Ogre 'El_Ergo' De Latoya
+                               <jmbaker@odin.cmp.ilstu.edu>
+ctf2m5   Disciple War Grounds  Hexadecimal <prestonglenn@spartanburg.net>
+ctf2m6   The Two Towers        Alexander Bernecker
+                               <alexb@informatik.uni-bremen.de>
+ctf2m7   Gloom Castles         Tim Willits <twillits@idsoftware.com>
+ctf2m8   Capturephobolis       American McGee <american@idsoftware.com>
+
+[ctfstart, ctf2m7 and ctf2m8 appear compliments of id software]
+
+Nat 'Suck' Friedman <ndf@aleph1.mit.edu> for some tidbits on the status bar,
+and the identify player impulse.
+
+Special thanks for the camera code as well.
+
+ShredCo for some id map conversion work.
+
+Greg 'Q-Man' Olson <qman@xenocide.org> and others for the id map
+conversions.
+
+Brian 'Vader' Wallace (of Clan FLAG!) <vader@columbia.edu> for assistance in
+testing.
+
+The Rangers, http://rangers.planetquake.com/, for their assistance and
+support.
+
+Bob '[R2]Uppa' Mollard <uppa@mortal.combat.org> for much assistance in testing
+and keeping me from losing my sanity.
 
 Type of Mod
 -----------
@@ -54,8 +104,6 @@ MDL      : yes
 
 Format of QuakeC
 ----------------
-unified diff  : yes
-context diff  : no
 .qc files     : yes
 progs.dat     : yes
 
@@ -65,16 +113,13 @@ QUICKSTART
 
 1.  This patch supports serveral modes of operating all related to Capture
     the Flag.  It can also provide an enhanced form of normal DeathMatch
-    as well.  In the default configuration, it is set up for using the
-    custom CTF maps 50% of the time and the specially modify id levels
-    the other 50%.  In order to use the default configuration, you must
-    perform steps 6 through 10 in order to modify the existing id
-    levels for CTF support.
+    as well.  In the default configuration, it is set up for using a
+	special start map for voting that determines the set of levels to play.
 
     NOTE: For custom CTF support, you need this server side package AND
     the client side one for the special levels.  In other words, to install
-    this on a server you need 3wave30.zip and 3wctfc30.zip (server side
-    and client side).  See step 5 for more information.
+    this on a server you need 3wave30.zip, 3wctfc30.zip and 3wctfc40.zip
+	(server side and client side).  See step 5 for more information.
 
     Even though this is a Quickstart, I really, really recommend one reads
     this entire file.
@@ -90,37 +135,36 @@ QUICKSTART
         mkdir ctf
 
 4.  Unzip this file into that directory (pkunzip users, make sure you use -d).
-    You should have progs.dat, server.txt (this file), a subdirectory called
-    src that contains the Quake-C source, a subdirectory called maps that
-    contains several *.ent files for adding CTF support to id's levels and
-    autoexec.cfg (load time server settings).
+    You should have progs.dat, qwprogs.dat, server.txt (this file), a
+	subdirectory called src that contains the Quake-C source for regular
+	Quake, a subdirectory called qwsrc that contains the QuakeWorld source,
+	a subdirectory called maps that contains several *.ent files for adding
+	CTF support to id's levels and autoexec.cfg (load time server settings)
+	for regular Quake and a server.cfg file for QuakeWorld.
 
-5.  Download the client patch (3wctfc30.zip) and unzip it into this directory
-    as well.  It should add pak0.pak and readme.txt.  DO NOT OVERWRITE YOUR
-    EXISTING pak0.pak FILE IN THE id1 DIRECTORY.
+5.  Download the client patch (3wctfc30.zip and 3wctfc40.zip) and unzip it
+    into this directory as well.  It should add pak0.pak, pak1.pak and
+	readme.txt.  DO NOT OVERWRITE YOUR EXISTING pak0.pak AND pak1.pak FILE
+	IN THE id1 DIRECTORY.
 
-6.  Steps 7 through 10 are only needed if you are going to support id's
-    levels.  If you are going only use the custom levels, set the temp1
-    variable to 100 in the autoexec.cfg file and skip to step 11.
-
-7.  Unpack the pak0.pak and pak1.pak files from the id1 subdirectory.
+6.  Unpack the pak0.pak and pak1.pak files from the id1 subdirectory.
     Linux users can use
     ftp://ftp.cdrom.com/pub/quake/utils/bsp_pak_tools/wreckdum.tar.gz
     and Windows 95/NT users can use
     ftp://ftp.cdrom.com/pub/quake/utils/bsp_pak_tools/winpak12.zip
     [Be certain to check for newer versions there as well].
 
-8.  Copy the *.bsp files you extracted from id's pak0.pak and pak1.pak in step
-    7 to quake/ctf/maps:
+7.  Copy the *.bsp files you extracted from id's pak0.pak and pak1.pak in step
+    6 to quake/ctf/maps:
         Linux:  cp quake/id1/maps/*.bsp quake/ctf/maps
         DOS/Win: copy \quake\id1\maps\*.bsp \quake\ctf\maps
 
-9.  Get a copy of qbsp in order to modify the id's bsp files that you copied
+8.  Get a copy of qbsp in order to modify the id's bsp files that you copied
     in step 8 for CTF support.  Win95/NT users can get qbsp.exe from
     ftp://ftp.idsoftware.com/idstuff/source/qutils.zip.  Linux users can look
     around or email me for a qbsp Linux binary I compiled myself.
 
-10. Make sure that qbsp is in your path, then:
+9.  Make sure that qbsp is in your path, then:
     Windows 95/NT users should do this following:
         cd \quake\ctf\maps
         dobsp.bat
@@ -138,29 +182,31 @@ QUICKSTART
             that registered server running users use to modify their maps.
     So that's the official party line].
 
-11. Load the autoexec.cfg file in the ctf directory into your favorite text
+10. Load the autoexec.cfg file for regular Quake, or the server.cfg for
+    QuakeWorld in the ctf directory into your favorite text
     editor (NOTE to Win95/NT users.  Notepad will barf on this file because it
     is in Unix text format.  Use the DOS based EDIT to work on it).  The
     default one looks like this:
 
         sys_ticrate 0.1
-        teamplay 995
-        hostname Noname-CTF
+        deathmatch 1
+        teamplay 1955?CTF4
+        hostname "Capture the Flag 4"
         timelimit 35
-        fraglimit 100
-        noexit 1
+        fraglimit 150
+        noexit 2
         pausable 0
-        map ctf1
-        temp1 50
+        sv_aim 1
+        map ctfstart
 
     Detailed description follows:
 
         sys_ticrate 0.1
             This sets the update frequency of the server to remote players.
             The default is 0.05.  Modem players will be a lot happier if its
-            set to 0.1
+            set to 0.1.  Not needed for QuakeWorld
 
-        teamplay 995
+        teamplay 1955
             The teamplay variable has been overloaded a lot.  It's a set of
             bit flags that indicate the team configuration options.  See the
             section on the teamplay variable below.  Essentially, you figure
@@ -171,8 +217,10 @@ QUICKSTART
             clients do not have to download any files to play on the server.
             If it is, they have to download the special client pak from the
             ThreeWave home page at http://quake.threewave.com/
+			512 is assumed in QuakeWorld (custom only).
+			1024 (team selection) is not available in QuakeWorld.
 
-        hostname Noname-CTF
+        hostname "Capture the Flag 4"
             This is the hostname of your Quake server that people see when
             they query it.  I recommend you use something that identifies it
             as your server.  It is best to leave CTF in the title so people
@@ -182,35 +230,30 @@ QUICKSTART
             If no one gets to the fraglimit in 35 minutes, change levels
             anyway.
 
-        fraglimit 100
-            Change levels when someone gets to 100 frags.
+        fraglimit 150
+            Change levels when someone gets to 150 frags.
 
-        noexit 1
+        noexit 2
             Exits on CTF really really, don't make sense.
 
         pausable 0
             Stop those annoying people from playing pause games.
 
-        map ctf1
-            Start on custom map 1.  If you aren't using custom maps, change
-            this to e1m1
+        map ctfstart
+			Start on the new ctfstart map.  This allows exit voting.
 
-        temp1 50
-            This is new in 3.0.  50 indicates that 50% of the time, select a
-            CTF level as the next level or and id level the remain 50%.  If
-            you set it to 100%, you will only get custom levels.  If you set
-            it to 0%, you get nothing but id levels.  This is ignored if
-            custom CTF is not enabled in the teamplay variable (value 512).
-
-12. You will probably want to modify the message of the day displayed upon
+11. You will probably want to modify the message of the day displayed upon
     connection, or enable the remote adminstration functions in admin.qc.  To
-    do this, you must edit the files client.qc for the MOTD and admin.qc to
+    do this, you must edit the files status.qc for the MOTD and admin.qc to
     enter an admin code.
 
     After you have made the changes, you must compile the Quake-C source.  qcc
     comes with the qutils package mentioned in 9.  Just run qcc in the
     quake/ctf/src directory.  Assuming a succesful compile, copy the new
     progs.dat to quake/ctf.
+
+	For QuakeWorld, the src is in quake/ctf/qwsrc, copy the qwprogs.dat to
+	quake/ctf
 
 13. Run the server.  Linux:
 
@@ -226,6 +269,16 @@ QUICKSTART
 
         cd \quake
         winded -dedicated 16 -game ctf
+
+	QuakeWorld:
+
+		qwsv +gamedir ctf
+
+***NOTE
+	Please note, the subdir must be called 'ctf'.  The new qwsv automatically
+	transmits the gamedir to the clients.  Since the clients are all installed
+	as 'ctf', you must also use this directory on the server.
+***NOTE
 
 14. Enjoy!
 
@@ -300,6 +353,7 @@ Teamplay (much of this documentation comes from John Spickes Complete
                 The enables the use of new sounds, models, maps and skins for
                 Capture the Flag.  If you enable this, your clients must
                 download the CTF custom pak file and install it.
+				***NOTE:  Not in QW version, assumes custom
 		1024    Enable the ability for players to select a team
 
         Obviously, not all these options make sense together.  teamplay 9
@@ -471,6 +525,11 @@ Redundant Message Removal
    Removed redundant messages such as "You got the shells" or "You got the
    armor."  This was just cluttering up the message stream and isn't needed
    since pickups are already signified by a flash and an audio cue.
+
+What's new in 4.00
+------------------
+
+- Lots
 
 What's new in 3.50
 ------------------

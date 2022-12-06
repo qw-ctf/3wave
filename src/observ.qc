@@ -94,6 +94,63 @@ void(entity player,entity tele) ObserverTeleporter =
   // player.flags = player.flags - player.flags & FL_ONGROUND;
 };
 
+float() DoObserverImpulse =
+{
+	if (self.impulse == 1 || self.impulse == 2 || /* self.impulse == 3 ||  */
+		self.button2) {
+
+/*
+		if (self.impulse == 3) {
+			if (self.CamState == CAM_NOT)
+				self.CamState = CAM_BECOME;
+			return TRUE;
+		}
+*/
+
+		self.observer = 0;
+		self.CamState = CAM_NOT;
+		SetChangeParms ();
+		self.killed = 0;
+
+		if (self.impulse == 1)
+			self.team = self.lastteam = TEAM_COLOR1;
+		else if (self.impulse == 2)
+			self.team = self.lastteam = TEAM_COLOR2;
+		else {
+			self.lastteam = -50;
+			TeamCheckTeam();
+		}
+
+		if (self.lastteam == TEAM_COLOR1)  {
+			bprint(self.netname);
+			bprint(" joined ред team!\n"); // red
+		} else if (self.lastteam == TEAM_COLOR2) {
+			bprint(self.netname);
+			bprint(" joined блуе team!\n"); // blue
+		}
+
+		self.impulse = 0;
+
+		self.player_flag = self.player_flag | TEAM_STUFF_COLOR;
+		if (teamplay & TEAM_CAPTURE_CUSTOM) {
+			if (self.lastteam == TEAM_COLOR1)
+				self.skin = 1;
+			else
+				self.skin = 3;
+			if (random() < 0.5)
+				self.skin = self.skin + 1; // visor dude
+			self.player_flag = self.player_flag - (self.player_flag & 65280);
+			self.player_flag = self.player_flag | (self.skin * 256);
+		}
+
+		self.weapon = W_BestWeapon();
+		respawn();
+		W_SetCurrentAmmo();
+		return TRUE;
+	}
+	return FALSE;
+};
+
 void () ObserverThink =
 {
     local entity e;
@@ -149,46 +206,7 @@ void () ObserverThink =
 	if (self.impulse && self.accessparm) { // admin functions
 		CheckAdminCmd();
 		self.impulse = 0;
-	} else if (self.impulse == 1 || self.impulse == 2 || self.button2) {
-		self.observer = 0;
-
-		SetChangeParms ();
-		self.killed = 0;
-
-		if (self.impulse == 1)
-			self.team = self.lastteam = TEAM_COLOR1 + 1;
-		else if (self.impulse == 2)
-			self.team = self.lastteam = TEAM_COLOR2 + 1;
-		else {
-			self.lastteam = -50;
-			TeamCheckTeam();
-		}
-
-		if (self.lastteam == TEAM_COLOR1 + 1)  {
-			bprint(self.netname);
-			bprint(" joined ред team!\n"); // red
-		} else if (self.lastteam == TEAM_COLOR2 + 1) {
-			bprint(self.netname);
-			bprint(" joined блуе team!\n"); // blue
-		}
-
-		self.impulse = 0;
-
-		self.player_flag = self.player_flag | TEAM_STUFF_COLOR;
-		if ((teamplay & TEAM_CAPTURE_CUSTOM) && (teamplay & TEAM_CAPTURE_FLAG)) {
-			if (self.lastteam == TEAM_COLOR1 + 1)
-				self.skin = 1;
-			else
-				self.skin = 3;
-			if (random() < 0.5)
-				self.skin = self.skin + 1; // visor dude
-			self.player_flag = self.player_flag - (self.player_flag & 65280);
-			self.player_flag = self.player_flag | (self.skin * 256);
-		}
-
-		self.weapon = W_BestWeapon();
-		respawn();
-		W_SetCurrentAmmo();
+	} else if (DoObserverImpulse()) {
 		return;
 	} else if (self.impulse) {
 		CheckAdminCmd();

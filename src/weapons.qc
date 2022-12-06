@@ -625,7 +625,7 @@ launch_spike
 Used for both the player and the ogre
 ===============
 */
-void(vector org, vector dir) launch_spike =
+void(vector org, vector dir, float spd) launch_spike =
 {
 	newmis = spawn ();
 	newmis.owner = self;
@@ -642,7 +642,7 @@ void(vector org, vector dir) launch_spike =
 	setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
 	setorigin (newmis, org);
 
-	newmis.velocity = dir * 1000;
+	newmis.velocity = dir * spd;
 };
 
 void() W_FireSuperSpikes =
@@ -654,7 +654,11 @@ void() W_FireSuperSpikes =
 	self.attack_finished = time + 0.2;
 	self.currentammo = self.ammo_nails = self.ammo_nails - 2;
 	dir = aim (self, 1000);
-	launch_spike (self.origin + '0 0 16', dir);
+	if (self.player_flag & ITEM_RUNE3_FLAG) {
+		HasteSound();
+		launch_spike (self.origin + '0 0 16', dir, 2000);
+	} else
+		launch_spike (self.origin + '0 0 16', dir, 1000);
 	newmis.touch = superspike_touch;
 	setmodel (newmis, "progs/s_spike.mdl");
 	setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
@@ -685,7 +689,11 @@ void(float ox) W_FireSpikes =
 	self.attack_finished = time + 0.2;
 	self.currentammo = self.ammo_nails = self.ammo_nails - 1;
 	dir = aim (self, 1000);
-	launch_spike (self.origin + '0 0 16' + v_right*ox, dir);
+	if (self.player_flag & ITEM_RUNE3_FLAG) {
+		HasteSound();
+		launch_spike (self.origin + '0 0 16' + v_right*ox, dir, 2000);
+	} else
+		launch_spike (self.origin + '0 0 16' + v_right*ox, dir, 1000);
 
 	self.punchangle_x = -2;
 };
@@ -1413,7 +1421,17 @@ void() ImpulseCommands =
 	else if (self.impulse == 23)
 		TeamFlagStatusReport();
 
-	else if (self.impulse == 255)
+	else if (self.impulse == 141)
+		identify_player();
+
+	else if (self.impulse == 70) {
+		self.statoff = !self.statoff; // status bar toggle
+		if (self.statoff)
+			sprint(self, "Status bar off.\n");
+		else
+			sprint(self, "Status bar on.\n");
+
+	} else if (self.impulse == 255)
 		QuadCheat ();
 	else
 		CheckAdminCmd();
@@ -1450,6 +1468,26 @@ void() W_WeaponFrame =
 
 /*
 ========
+Resistancesound
+
+Plays sound if needed
+========
+*/
+void(entity who) ResistanceSound =
+{
+// RUNE play resistance sound if player has Earth Magic
+	if (who.player_flag & ITEM_RUNE1_FLAG) {
+		if (who.invincible_sound < time) {
+			who.invincible_sound = time + 1;
+			if (teamplay & TEAM_CAPTURE_CUSTOM)
+				sound(who, CHAN_BODY, "rune/rune1.wav", 1, ATTN_NORM);
+			else
+				sound(who, CHAN_BODY, "items/protect3.wav", 1, ATTN_NORM);
+		}
+	}
+};
+/*
+========
 SuperDamageSound
 
 Plays sound if needed
@@ -1458,13 +1496,38 @@ Plays sound if needed
 void() SuperDamageSound =
 {
 // RUNE play super damage sound if player has Black Magic, too
-	if (self.super_damage_finished > time || (self.player_flag & ITEM_RUNE2_FLAG)) {
+	if (!(teamplay & TEAM_CAPTURE_CUSTOM)) {
+		if (self.super_damage_finished > time ||
+			(self.player_flag & ITEM_RUNE2_FLAG)) {
+			if (self.super_sound < time) {
+				self.super_sound = time + 1;
+				sound (self, CHAN_BODY, "items/damage3.wav", 1, ATTN_NORM);
+			}
+		}
+		return;
+	}
+
+	if ((self.player_flag & ITEM_RUNE2_FLAG) &&
+		(self.super_damage_finished > time)) {
+		if (self.super_sound < time) {
+			self.super_sound = time + 1;
+			sound (self, CHAN_BODY, "rune/rune22.wav", 1, ATTN_NORM);
+		}
+	}
+
+	if (self.super_damage_finished > time) {
 		if (self.super_sound < time) {
 			self.super_sound = time + 1;
 			sound (self, CHAN_BODY, "items/damage3.wav", 1, ATTN_NORM);
 		}
 	}
-	return;
+
+	if (self.player_flag & ITEM_RUNE2_FLAG) {
+		if (self.super_sound < time) {
+			self.super_sound = time + 1;
+			sound (self, CHAN_BODY, "rune/rune2.wav", 1, ATTN_NORM);
+		}
+	}
 };
 
 /*
@@ -1480,10 +1543,12 @@ void() RegenerationSound =
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
 		if (self.regeneration_sound < time) {
 			self.regeneration_sound = time + 1;
-			sound(self, CHAN_BODY, "items/r_item1.wav", 1, ATTN_NORM);
+			if (teamplay & TEAM_CAPTURE_CUSTOM)
+				sound(self, CHAN_BODY, "rune/rune4.wav", 1, ATTN_NORM);
+			else
+				sound(self, CHAN_BODY, "items/r_item1.wav", 1, ATTN_NORM);
 		}
 	}
-	return;
 };
 
 /*
@@ -1498,10 +1563,12 @@ void() HasteSound =
 // RUNE play haste (Chthon's roar) sound if player has Hell Magic
 	if (self.player_flag & ITEM_RUNE3_FLAG) {
 		if (self.haste_sound < time) {
-			self.haste_sound = time + 2;
-			sound(self, CHAN_BODY, "boss1/sight1.wav", 1, ATTN_NORM);
+			self.haste_sound = time + 1;
+			if (teamplay & TEAM_CAPTURE_CUSTOM)
+				sound(self, CHAN_BODY, "rune/rune3.wav", 1, ATTN_NORM);
+			else
+				sound(self, CHAN_BODY, "boss1/sight1.wav", 1, ATTN_NORM);
 		}
 	}
-	return;
 };
 

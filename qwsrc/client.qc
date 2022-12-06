@@ -6,29 +6,10 @@ void() player_pain;
 void() player_stand1;
 void (vector org) spawn_tfog;
 void (vector org, entity death_owner) spawn_tdeath;
-string(string old) RandomLevel;
 void() SpawnRunes;
 
 float	modelindex_eyes, modelindex_player;
-
-void() MOTD =
-{
-	if (self.motd_count < 5) {
-		self.motd_time = time + 1;
-		self.motd_count = self.motd_count + 1;
-		if (teamplay & TEAM_CAPTURE_FLAG)
-			if (self.steam == TEAM_COLOR1)
-				centerprint(self, "Welcome!\nQuakeWorld ThreeWave CTF 1.1\n\nцаптуре тхе флаг\n\nYou are on the ред team"); //red
-			else
-				centerprint(self, "Welcome!\nQuakeWorld ThreeWave CTF 1.1\n\nцаптуре тхе флаг\n\nYou are on the блуе team"); //blue
-		else if (teamplay)
-			centerprint(self, "Welcome!\nQuakeWorld Threewave 1.1\n\nTEAMPLAY IS ACTIVE");
-		else
-			centerprint(self, "Welcome!\nQuakeWorld ThreeWave Server Mods");
-		return;
-	}
-	self.motd_time = 0;
-};
+float pregameover;
 
 // ZOID: with several effects doing the dimlight thing, they just can't
 // turn it off.  Do not set self.effects with EF_DIMLIGHT directly.  This
@@ -49,8 +30,8 @@ void () CheckDimLight = {
 	if (self.super_damage_finished > time)
 		flag = 1;
 	// flag
-//	if (self.player_flag & ITEM_ENEMY_FLAG)
-//		flag = 1;
+	if (self.player_flag & ITEM_ENEMY_FLAG)
+		flag = 1;
 
 	if (flag)
 		self.effects = self.effects | EF_DIMLIGHT;
@@ -86,6 +67,10 @@ void() SetChangeParms =
 	if (self.health <= 0)
 	{
 		SetNewParms ();
+		if (gamestart)
+			parm10 = -1;
+		else
+			parm10 = self.steam; // Save the current team of the player
 		return;
 	}
 
@@ -98,40 +83,33 @@ void() SetChangeParms =
 		self.health = 100;
 	if (self.health < 50)
 		self.health = 50;
-	if (teamplay & TEAM_CAPTURE_FLAG) // don't carry items between levels in CTF
-		SetNewParms();
-	else {
-		parm1 = self.items;
-		parm2 = self.health;
-		parm3 = self.armorvalue;
-		if (self.ammo_shells < 25)
-			parm4 = 25;
-		else
-			parm4 = self.ammo_shells;
-		parm5 = self.ammo_nails;
-		parm6 = self.ammo_rockets;
-		parm7 = self.ammo_cells;
-		parm8 = self.weapon;
-		parm9 = self.armortype * 100;
-	}
+	SetNewParms();
 // *TEAMPLAY*
-	parm10 = self.steam; // Save the current team of the player
+	if (gamestart)
+		parm10 = -1;
+	else
+		parm10 = self.steam; // Save the current team of the player
 	parm16 = self.player_flag;
 };
 
 void() SetNewParms =
 {
-        parm1 = IT_SHOTGUN | IT_AXE | IT_GRAPPLE;
-	parm2 = 100;
-	if (teamplay & TEAM_CAPTURE_FLAG) {
+	if (gamestart && !pregameover) {
+		parm1 = IT_AXE;
+		parm2 = 100;
+		parm4 = 0;
+		parm8 = IT_AXE;
+		parm10 = 1;
+	} else {
+		parm1 = IT_SHOTGUN | IT_AXE | IT_GRAPPLE;
+		parm2 = 100;
 		parm3 = 50;
 		parm9 = 30;
 		parm1 = parm1 + IT_ARMOR1;
-	} else {
-	parm3 = 0;
-		parm9 = 0;
+		parm4 = 40;
+		parm8 = IT_SHOTGUN;
+		parm10 = -1;	// Reset
 	}
-	parm4 = 40;
 	parm5 = 0;
 	parm6 = 0;
 	parm7 = 0;
@@ -147,13 +125,12 @@ void() DecodeLevelParms =
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_RUNE_MASK);
 	self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
 
-	self.ctfskinno = (self.player_flag & 65280) / 256;
-	TeamSkinSet();
-
-	if (serverflags)
-	{
-                if (world.model == "maps/start.bsp")
-			SetNewParms ();		// take away all stuff on starting new episode
+	if (gamestart) {
+		SetNewParms ();		// take away all stuff on starting new episode
+		self.ctfskinno = 0;
+	} else {
+		self.ctfskinno = (self.player_flag & 65280) / 256;
+		TeamSkinSet();
 	}
 
 	self.items = parm1;
@@ -218,11 +195,17 @@ entity() FindIntermission =
 
 void() GotoNextMap =
 {
-//ZOID: We're overloading samelevel for use for map checking
-//	if (cvar("samelevel"))	// if samelevel is set, stay on same level
-//		changelevel (mapname);
-//	else
+	if (cvar("samelevel"))	// if samelevel is set, stay on same level
+		changelevel (mapname);
+	else {
+//FIXME special case for now
+		if (nextmap == "end")
+			nextmap = "dm1";
+		else if (nextmap == "ctf9")
+			nextmap = "ctf2m1";
+
 		changelevel (nextmap);
+	}
 };
 
 
@@ -300,11 +283,8 @@ void() changelevel_touch =
 	if (teamplay & TEAM_CAPTURE_FLAG)
 		return;
 
-	if ((cvar("samelevel") == 2) || ((cvar("samelevel") == 3) && (mapname != "start")))
-	{
-		T_Damage (other, self, self, 50000);
-		return;
-	}
+	if ((cvar("samelevel") == 2) || ((cvar("samelevel") == 3) && !gamestart))
+		return; // do nothing
 
 	bprint (PRINT_HIGH, other.netname);
 	bprint (PRINT_HIGH," exited the level\n");
@@ -326,6 +306,24 @@ When the player touches this, he gets sent to the map listed in the "map" variab
 */
 void() trigger_changelevel =
 {
+	if (gamestart) {
+		if (self.map == "e1m1")
+			self.message = "E1 Dimension of the Doomed";
+		else if (self.map == "e2m1")
+			self.message = "E2 The Realm of Black Magic";
+		else if (self.map == "e3m1")
+			self.message = "E3 The Netherworld";
+		else if (self.map == "e4m1")
+			self.message = "E4 The Elder World";
+		else if (self.map == "end")
+			self.message = "The Deathmatch Arenas";
+		else
+			self.message = "Unknown";
+		self.classname = "trigger_voteexit";
+		trigger_voteexit();
+		return;
+	}
+
 	if (!self.map)
 		objerror ("chagnelevel trigger doesn't have map");
 
@@ -365,6 +363,11 @@ Player entered the suicide command
 */
 void() ClientKill =
 {
+	if (gamestart) {
+		sprint(self, PRINT_HIGH, "Life just started.\n");
+		return;
+	}
+
 	if (self.suicide_count > 3) {
 		sprint(self, PRINT_HIGH, "You have suicided too much already.\n");
 		return;
@@ -409,6 +412,11 @@ entity() SelectSpawnPoint =
 		spot = TeamCaptureSpawn();
  		if (spot != world)
  			return spot;
+	} else if (gamestart && self.killed) {
+		lastvotespawn = find(lastvotespawn, classname, "info_vote_destination");
+		if (lastvotespawn == world)
+			lastvotespawn = find(lastvotespawn, classname, "info_vote_destination");
+		return lastvotespawn;
 	}
 	lastspawn = find(lastspawn, classname, "info_player_deathmatch");
 	if (lastspawn == world)
@@ -596,12 +604,8 @@ potential spawning position for deathmatch games
 */
 void() info_player_deathmatch =
 {
-	local entity rspawn;
-
-	// spawn the runes
-	rspawn = spawn();
-	rspawn.nextthink = time + 0.1;
-	rspawn.think = SpawnRunes;
+	if (deathmatch)
+		StartRuneSpawn();
 };
 
 /*QUAKED info_player_coop (1 0 1) (-16 -16 -24) (16 16 24)
@@ -621,25 +625,97 @@ RULES
 
 /*
 go to the next level for deathmatch
+only called if a time or frag limit has expired
 */
 void() NextLevel =
 {
 	local entity o;
 
-	if (teamplay & TEAM_CAPTURE_FLAG) {
+	// episode one
+	if (mapname == "e1m1") nextmap = "e1m2";
+	else if (mapname == "e1m2") nextmap = "e1m3";
+	else if (mapname == "e1m3") nextmap = "e1m4";
+	else if (mapname == "e1m4") nextmap = "e1m5";
+	else if (mapname == "e1m5") nextmap = "e1m6";
+	else if (mapname == "e1m6") nextmap = "ctfstart";
+
+	// episode two
+	else if (mapname == "e2m1") nextmap = "e2m2";
+	else if (mapname == "e2m2") nextmap = "e2m3";
+	else if (mapname == "e2m3") nextmap = "e2m4";
+	else if (mapname == "e2m4") nextmap = "e2m5";
+	else if (mapname == "e2m5") nextmap = "e2m6";
+	else if (mapname == "e2m6") nextmap = "e2m7";
+	else if (mapname == "e2m7") nextmap = "ctfstart";
+
+	// episode three
+	else if (mapname == "e3m1") nextmap = "e3m2";
+	else if (mapname == "e3m2") nextmap = "e3m3";
+	else if (mapname == "e3m3") nextmap = "e3m4";
+	else if (mapname == "e3m4") nextmap = "e3m5";
+	else if (mapname == "e3m5") nextmap = "e3m6";
+	else if (mapname == "e3m6") nextmap = "e3m7";
+	else if (mapname == "e3m7") nextmap = "ctfstart";
+
+	// episode four
+	else if (mapname == "e4m1") nextmap = "e4m2";
+	else if (mapname == "e4m2") nextmap = "e4m3";
+	else if (mapname == "e4m3") nextmap = "e4m4";
+	else if (mapname == "e4m4") nextmap = "e4m5";
+	else if (mapname == "e4m5") nextmap = "e4m6";
+	else if (mapname == "e4m6") nextmap = "e4m7";
+	else if (mapname == "e4m7") nextmap = "e4m8";
+	else if (mapname == "e4m8") nextmap = "ctfstart";
+
+	// the deathmatch arenas
+	else if (mapname == "dm1") nextmap = "dm2";
+	else if (mapname == "dm2") nextmap = "dm3";
+	else if (mapname == "dm3") nextmap = "dm4";
+	else if (mapname == "dm4") nextmap = "dm5";
+	else if (mapname == "dm5") nextmap = "dm6";
+	else if (mapname == "dm6") nextmap = "ctfstart";
+
+	// ctf episode one
+	else if (mapname == "ctf1") nextmap = "ctf2";
+	else if (mapname == "ctf2") nextmap = "ctf3";
+	else if (mapname == "ctf3") nextmap = "ctf4";
+	else if (mapname == "ctf4") nextmap = "ctf5";
+	else if (mapname == "ctf5") nextmap = "ctf6";
+	else if (mapname == "ctf6") nextmap = "ctf7";
+	else if (mapname == "ctf7") nextmap = "ctf8";
+	else if (mapname == "ctf8") nextmap = "ctfstart";
+
+	// ctf episode two
+	else if (mapname == "ctf2m1") nextmap = "ctf2m2";
+	else if (mapname == "ctf2m2") nextmap = "ctf2m3";
+	else if (mapname == "ctf2m3") nextmap = "ctf2m4";
+	else if (mapname == "ctf2m4") nextmap = "ctf2m5";
+	else if (mapname == "ctf2m5") nextmap = "ctf2m6";
+	else if (mapname == "ctf2m6") nextmap = "ctf2m7";
+	else if (mapname == "ctf2m7") nextmap = "ctf2m8";
+	else if (mapname == "ctf2m8") nextmap = "ctfstart";
+
+	o = spawn();
+	o.map = nextmap;
+	o.think = execute_changelevel;
+	o.nextthink = time + 0.1;
+	return;
+
+// DISABLED from here
+
+	// find a trigger changelevel
+	o = find(world, classname, "trigger_changelevel");
+
+	// go back to start if no trigger_changelevel
+	if (!o)
+	{
+		mapname = "start";
 		o = spawn();
-		o.map = RandomLevel(mapname);
-	} else {
-		// find a trigger changelevel
-		o = find(world, classname, "trigger_changelevel");
-		if (!o || mapname == "start")
-		{	// go back to same map if no trigger_changelevel
-			o = spawn();
-			o.map = mapname;
-		}
+		o.map = mapname;
 	}
 
 	nextmap = o.map;
+	gameover = TRUE;
 
 	if (o.nextthink < time)
 	{
@@ -647,131 +723,6 @@ void() NextLevel =
 		o.nextthink = time + 0.1;
 	}
 
-	if (!intermission_running)
-		intermission_running = -1;
-};
-
-// Return a new random level, that doesn't match old
-
-// Rewriten for CTF
-// uses the server temp1 cvar for level tracking
-// temp1 is mapped out as:
-//  bit 16 to 12 for id level num 0xf800, 63488
-//  bit 11 to 7 for Custom level num 0x0f80, 3968
-//  bit 6 to 0 for percent of custom CTF levels 0x007f, 127
-// server ops should just set temp1 to the percent and the start id/ctf
-// levels will be zero (first level)
-// 1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536
-// ---------------- --------------------- ---------------------------
-// x x x x  x  x  x
-//                  x   x   x   x    x
-//                                        x    x    x     x     x
-//
-string(string old) RandomLevel =
-{
-local float r;
-local float idlvl, ctflvl;
-local float percent;
-local string smap;
-local string s;
-
-	r = random();
-	if (teamplay & TEAM_CAPTURE_FLAG) {
-		// extract stuff from temp1
-		percent = cvar("samelevel") & 127;
-		idlvl = (cvar("samelevel") & 3968) / 128;
-		ctflvl = (cvar("samelevel") & 126976) / 4096;
-
-		if ((random() < percent / 100.0)) {
-			ctflvl = ctflvl + 1;
-			if (ctflvl == 1) smap = "ctf2";
-			else if (ctflvl == 2) smap = "ctf3";
-			else if (ctflvl == 3) smap = "ctf4";
-			else if (ctflvl == 4) smap = "ctf5";
-			else if (ctflvl == 5) smap = "ctf6";
-			else if (ctflvl == 6) smap = "ctf7";
-			else if (ctflvl == 7) smap = "ctf8";
-			else {
-				smap = "ctf1";
-				ctflvl = 0;
-			}
-		} else {
-			// capture levels
-			idlvl = idlvl + 1;
-			if (idlvl == 1) smap = "e1m2";
-			else if (idlvl == 2) smap = "e1m3";
-			else if (idlvl == 3) smap = "e1m4";
-			else if (idlvl == 4) smap = "e1m5";
-			else if (idlvl == 5) smap = "e1m6";
-			else if (idlvl == 6) smap = "e1m8";
-			else if (idlvl == 7) smap = "e2m1";
-			else if (idlvl == 8) smap = "e2m2";
-			else if (idlvl == 9) smap = "e2m3";
-			else if (idlvl == 10) smap = "e2m5";
-			else if (idlvl == 11) smap = "e4m3";
-			else if (idlvl == 12) smap = "e4m4";
-			else if (idlvl == 13) smap = "e4m5";
-			else if (idlvl == 14) smap = "e4m6";
-			else if (idlvl == 15) smap = "dm3";
-			else if (idlvl == 16) smap = "dm6";
-			else {
-				smap = "e1m1";
-				idlvl = 0;
-			}
-		}
-		// recombine the cvar
-		s = ftos(ctflvl * 4096 + idlvl * 128 + percent);
-		cvar_set("samelevel", s);
-		return smap;
-	}
-	if (r > 0.8) {
-		r = random() * 7;
-		if ((r >= 6) && (old != "e1m1")) return ("e1m1"); // e1m1: Slipgate Complex -- by John Romero
-		if ((r >= 5) && (old != "e1m2")) return ("e1m2"); // e1m2: Castle of the Damned -- by Tim Willits
-		if ((r >= 4) && (old != "e1m3")) return ("e1m3"); // e1m3: The Necropolis -- by Tim Willits
-		if ((r >= 3) && (old != "e1m4")) return ("e1m4"); // e1m4: The Grisly Grotto -- by Tim Willits
-		if ((r >= 2) && (old != "e1m5")) return ("e1m5"); // e1m5: Gloom Keep -- by Tim Willits
-		if ((r >= 1) && (old != "e1m6")) return ("e1m6"); // e1m6: The Door To Chthon -- by American McGee
-// e1m7: The House of Chthon -- removed because of lag problems
-		return ("e1m8"); // e1m8: Ziggurat Vertigo --by American McGee
-	} else if (r > 0.6) {
-		r = random() * 6;
-		if ((r >= 5) && (old != "e2m1")) return ("e2m1"); // e2m1: The Installation -- by John Romero
-		if ((r >= 4) && (old != "e2m2")) return ("e2m2"); // e2m2: Ogre Citadel -- by John Romero
-		if ((r >= 3) && (old != "e2m3")) return ("e2m3"); // e2m3: Crypt of Decay -- by John Romero
-		if ((r >= 2) && (old != "e2m4")) return ("e2m4"); // e2m4: The Ebon Fortress  -- by John Romero
-		if ((r >= 1) && (old != "e2m5")) return ("e2m5"); // e2m5: The Wizard's Manse -- by John Romero
-// e2m6: The Dismal Oubliette -- removed because it sucks for dm
-		return ("e2m7"); // e2m7: Underearth --by Tim Willits
-	} else if (r > 0.4) {
-		r = random() * 6;
-		if ((r >= 5) && (old != "e3m1")) return ("e3m1"); // e3m1: Termination Central -- by John Romero
-		if ((r >= 4) && (old != "e3m2")) return ("e3m2"); // e3m2: The Vaults of Zin -- by American McGee
-		if ((r >= 3) && (old != "e3m3")) return ("e3m3"); // e3m3: The Tomb of Terror -- by American McGee
-// e3m4 (Satan's Dark Delight) removed because it sucks for dm
-		if ((r >= 2) && (old != "e3m5")) return ("e3m5"); // e3m5: Wind Tunnels --by Tim Willits
-		if ((r >= 1) && (old != "e3m6")) return ("e3m6"); // e3m6: Chambers of Torment -- by American McGee & Tim Willits
-		return ("e3m7"); // e3m7: The Haunted Halls -- by American McGee
-	} else if (r > 0.2) {
-		r = random() * 8;
-		if ((r >= 7) && (old != "e4m1")) return ("e4m1"); // e4m1: The Sewage System -- by Tim Willits
-		if ((r >= 6) && (old != "e4m2")) return ("e4m2"); // e4m2: The Tower of Despair --by Sandy Petersen
-		if ((r >= 5) && (old != "e4m3")) return ("e4m3"); // e4m3: The Elder God Shrine --by Sandy Petersen
-		if ((r >= 4) && (old != "e4m4")) return ("e4m4"); // e4m4: The Palace of Hate --by Sandy Petersen
-		if ((r >= 3) && (old != "e4m5")) return ("e4m5"); // e4m5: Hell's Atrium --by Sandy Petersen
-		if ((r >= 2) && (old != "e4m6")) return ("e4m6"); // e4m6: The Pain Maze --by Sandy Petersen
-		if ((r >= 1) && (old != "e4m7")) return ("e4m7"); // e4m7: Azure Agony --by Sandy Petersen
-		return ("e4m8"); // e4m8: The Nameless City -- by Sandy Petersen
-	} else {
-		r = random() * 6;
-		if ((r >= 5) && (old != "dm1")) return ("dm1"); // dm1: Place of Two Deaths --by Tim Willits
-		if ((r >= 4) && (old != "dm2")) return ("dm2"); // dm2: Claustrophobopolis --by American McGee
-		if ((r >= 3) && (old != "dm3")) return ("dm3"); // dm3: The Abandoned Base --by John Romero
-		if ((r >= 2) && (old != "dm4")) return ("dm4"); // dm4: The Bad Place --by American McGee
-		if ((r >= 1) && (old != "dm5")) return ("dm5"); // dm5: The Cistern --by Tim Willits
-		return ("dm6"); // dm6: The Dark Zone --by Tim Willits
-	}
-	return("start");
 };
 
 /*
@@ -783,66 +734,39 @@ Exit deathmatch games upon conditions
 */
 void() CheckRules =
 {
- 	local	entity	p;
- 	local	float	total1, total2;
-	local	string	s;
+	local	float		timelimit;
+	local	float		fraglimit;
+	local	entity		o;
 
-	if (intermission_running)
+	if (gameover || pregameover)	// someone else quit the game already
 		return;
 
-//	if (timelimit && time >= timelimit)
-//		NextLevel ();
-//
-//	if (fraglimit && self.frags >= fraglimit)
-//		NextLevel ();
+	if (gamestart) {
+		if ((vote_leader != world) && voteexit_time && (time > voteexit_time)) {
+			pregameover = 1;
+			o = spawn();
+			nextmap = vote_leader.map;
+			o.map = nextmap;
+			o.think = execute_changelevel;
+			o.nextthink = time + 0.1;
+			return;
+		}
+		return;
+	}
+
+	timelimit = cvar("timelimit") * 60;
+	fraglimit = cvar("fraglimit");
 
 	if ((timelimit && time >= timelimit) ||
 		(fraglimit && (self.frags >= fraglimit))) {
-		if (teamplay & TEAM_CAPTURE_FLAG) {
-			// count up total
-			total1 = total2 = 0;
-			p = find(world, classname, "player");
-			while (p != world) {
-				if (p.steam == TEAM_COLOR1)
-					total1 = total1 + p.frags;
-				else if (p.steam == TEAM_COLOR2)
-					total2 = total2 + p.frags;
-				p = find(p, classname, "player");
-			}
-
-			if (total1 > total2) {
-				bprint(PRINT_HIGH, "ред team won the level with ");
-				s = ftos(total1);
-				bprint(PRINT_HIGH, s);
-				bprint(PRINT_HIGH, " points!\n");
-				bprint(PRINT_HIGH, "блуе team lost with ");
-				s = ftos(total2);
-				bprint(PRINT_HIGH, s);
-				bprint(PRINT_HIGH, " points.\n");
-			} else if (total1 < total2) {
-				bprint(PRINT_HIGH, "блуе team won the level with ");
-				s = ftos(total1);
-				bprint(PRINT_HIGH, s);
-				bprint(PRINT_HIGH, " points!\n");
-				bprint(PRINT_HIGH, "ред team lost with ");
-				s = ftos(total2);
-				bprint(PRINT_HIGH, s);
-				bprint(PRINT_HIGH, " points.\n");
-			} else {
-				bprint(PRINT_HIGH, "блуе and ред team tied level with ");
-				s = ftos(total1);
-				bprint(PRINT_HIGH, s);
-				bprint(PRINT_HIGH, " points!\n");
-			}
-		}
-
+		pregameover = 1;
+		TeamEndScore();
 		NextLevel ();
-  		return;
-  	}
+		return;
+	}
 
-	// update team scores?
-	TeamCaptureCheckUpdate();
 };
+
 
 //============================================================================
 
@@ -1052,13 +976,12 @@ void() PlayerPreThink =
 		return;					// the think tics
 	}
 
+	TeamCapturePlayerUpdate();
+
 	if (self.view_ofs == '0 0 0')
 		return;		// intermission or finale
 
 	makevectors (self.v_angle);		// is this still used
-
-	if (self.motd_time && self.motd_time < time)
-		MOTD();
 
 	CheckRules ();
 	WaterMove ();
@@ -1095,10 +1018,22 @@ void() PlayerPreThink =
 
 // RUNE: If player has rune of elder magic (4), regeneration
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
-		if (self.health < 100 && self.regen_time < time) {
-			self.health = self.health + 2;
-			self.regen_time = time + 0.5;
-			RegenerationSound();
+		if (self.regen_time < time) {
+			self.regen_time = time;
+			if (self.health < 150) {
+				self.health = self.health + 5;
+				if (self.health > 150)
+					self.health = 150;
+				self.regen_time = self.regen_time + 0.5;
+				RegenerationSound();
+			}
+			if (self.armorvalue < 150 && self.armortype) {
+				self.armorvalue = self.armorvalue + 5;
+				if (self.armorvalue > 150)
+					self.armorvalue = 150;
+				self.regen_time = self.regen_time + 0.5;
+				RegenerationSound();
+			}
 		}
 	}
 // RUNE
@@ -1331,8 +1266,7 @@ void() ClientConnect =
 	bprint (PRINT_HIGH, self.netname);
 	bprint (PRINT_HIGH, " entered the game\n");
 
-	self.motd_time = time + 3;
-	self.motd_count = 0;
+	self.motd_count = 1;
 	self.player_flag = self.player_flag - (self.player_flag & PF_GHOST);
 
 	self.suicide_count = 0;
@@ -1456,21 +1390,19 @@ void(entity targ, entity attacker) ClientObituary =
 				attacker.frags = attacker.frags - 1;
 				bprint (PRINT_MEDIUM,targ.netname);
 
-				if (targ.weapon == 64 && targ.waterlevel > 1)
-				{
-					bprint (PRINT_MEDIUM," discharges into the water.\n");
-					return;
-				}
-				if (targ.weapon == IT_GRENADE_LAUNCHER) {
-					bprint (PRINT_MEDIUM," tries to put the pin back in\n");
-				} else if (rnum) {
-					bprint (PRINT_MEDIUM," becomes bored with life\n");
-				} else if (targ.steam != targ.steam) {
+				if (self.killed == 99) {
 					//ZOID: try if player was gibbed for changing teams
 					if (teamplay & TEAM_STATIC_TEAMS)
 						bprint (PRINT_MEDIUM, " tried to change teams\n");
 					else
 						bprint (PRINT_MEDIUM, " changed teams\n");
+				} else if (targ.weapon == 64 && targ.waterlevel > 1) {
+					bprint (PRINT_MEDIUM," discharges into the water.\n");
+					return;
+				} else if (targ.weapon == IT_GRENADE_LAUNCHER) {
+					bprint (PRINT_MEDIUM," tries to put the pin back in\n");
+				} else if (rnum) {
+					bprint (PRINT_MEDIUM," becomes bored with life\n");
 				} else {
 					bprint (PRINT_MEDIUM," checks if his weapon is loaded\n");
 				}

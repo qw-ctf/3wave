@@ -1,27 +1,10 @@
-/*
-        The Complete Enhanced Teamplay
-
-   John Spickes -- jspickes@eng.umd.edu
-
-	$Id: teamplay.qc 1.17 1996/08/17 16:52:45 jspickes Exp $
-
-	$Log: teamplay.qc $
-	Revision 1.17  1996/08/17 16:52:45  jspickes
-	Fixed a problem with displaying the current team settings that could cause
-	the wrong output when teamplay was negative.  Also added code to indicate
-	when ID's silly teamplay code is being used.
-
-	Revision 1.16  1996/08/17 00:41:52  jspickes
-	Turned off strict coop by default.
-	Fixed a bug that could have caused strange behavior if TEAM_COLOR* was
-	set to -2.
-
-	Revision 1.15  1996/08/17 00:34:17  jspickes
-	Added instructions on drop-item use in current settings output.
-	Fixed a problem that would allow you to drop lots of backpacks with
-	nothing in them.
-
-*/
+/****************************************************************************
+ * ThreeWave Capture The Flag
+ ****************************************************************************
+ * Based on John Spikles Complete Enhanced Teamplay
+ ****************************************************************************
+ * Version 4.0 rewrite Mar 21, 1997
+ ****************************************************************************/
 
 /** Defs **/
 
@@ -107,25 +90,52 @@ void() W_SetCurrentAmmo;
 void() bound_other_ammo;
 void(float o, float n) Deathmatch_Weapon;
 void() BackpackTouch;
+void(entity who, string s) TeamPlayerUpdate;
+void() TeamCaptureResetUpdate;
 
 // Return a name for the color of a team
 string(float Team) GetTeamColor =
 {
-	if(Team == 0) return("Blue");
-	else if(Team == 1) return("Steel blue");
-	else if(Team == 2) return("Brown");
-	else if(Team == 3) return("Baby blue");
-	else if(Team == 4) return("Green");
-	else if(Team == 5) return("Red");
-	else if(Team == 6) return("Olive");
-	else if(Team == 7) return("Orange");
-	else if(Team == 8) return("Peech");
-	else if(Team == 9) return("Purple");
-	else if(Team == 10) return("Majenta");
-	else if(Team == 11) return("Grey");
-	else if(Team == 12) return("Aqua");
-	else if(Team == 13) return("Yellow");
-	else if(Team == 14) return("Blue");
+	if(Team == 0) return("Grey");
+	else if(Team == 1) return("Brown");
+	else if(Team == 2) return("Steel blue");
+	else if(Team == 3) return("Green");
+	else if(Team == 4) return("Red");
+	else if(Team == 5) return("Olive");
+	else if(Team == 6) return("Orange");
+	else if(Team == 7) return("Peech");
+	else if(Team == 8) return("Purple");
+	else if(Team == 9) return("Majenta");
+	else if(Team == 10) return("Tan");
+	else if(Team == 11) return("Aqua");
+	else if(Team == 12) return("Yellow");
+	else if(Team == 13) return("Blue");
+	else if(Team == 14) return("Bright Orange");
+	else if(Team == 15) return("Bright Red");
+	return "Unknown";
+};
+
+// Return a name for the color of a team
+string(float Team) GetShortTeamColor =
+{
+	Team = Team & 15; // color loops
+
+	if(Team == 0) return("grey");
+	else if(Team == 1) return("brwn");
+	else if(Team == 2) return("sblu");
+	else if(Team == 3) return("grn");
+	else if(Team == 4) return("red");
+	else if(Team == 5) return("olve");
+	else if(Team == 6) return("orng");
+	else if(Team == 7) return("pch");
+	else if(Team == 8) return("purp");
+	else if(Team == 9) return("majn");
+	else if(Team == 10) return("tan");
+	else if(Team == 11) return("aqua");
+	else if(Team == 12) return("ylw");
+	else if(Team == 13) return("blue");
+	else if(Team == 14) return("bojn");
+	else if(Team == 15) return("bred");
 	return "Unknown";
 };
 
@@ -215,7 +225,7 @@ Return TRUE if the target's armor can take damage from this attacker.
 
 float(entity targ, entity inflictor, entity attacker, float damage) TeamArmorDam =
 {
-        if( teamplay < 0 )
+        if( teamplay < 0 || gamestart)
                 return TRUE;
         if( (teamplay & TEAM_ARMOR_PROTECT) &&
 			attacker.steam == targ.steam &&
@@ -236,7 +246,7 @@ Return TRUE if the target can take health damage from this attacker.
 
 float(entity targ, entity inflictor, entity attacker, float damage) TeamHealthDam =
 {
-        if( teamplay < 0 )
+        if( teamplay < 0 || gamestart)
         {
                 return TRUE;
         }
@@ -462,10 +472,25 @@ void() TeamCheckLock =
         if ( teamplay < 0 )
                 return;
 
+		if (gamestart) {
+			s = infokey(self, "bottomcolor");
+			pteam = stof(s);
+			if (pteam != 0)
+				stuffcmd(self, "setinfo bottomcolor 0\n");
+			self.steam = -1;
+			return;
+		}
+
+
 		if (self.player_flag & TEAM_STUFF_COLOR) {
 			self.player_flag = self.player_flag - TEAM_STUFF_COLOR;
 			s = ftos(self.steam);
 			stuffcmd(self, "setinfo bottomcolor ");
+			stuffcmd(self, s);
+			stuffcmd(self, "\n");
+
+			s = GetShortTeamColor(self.steam);
+			stuffcmd(self, "setinfo team ");
 			stuffcmd(self, s);
 			stuffcmd(self, "\n");
 
@@ -483,14 +508,23 @@ void() TeamCheckLock =
 		pteam = stof(s);
 
 		// Check to see if the player has changed skins
-		if (self.steam > 0 && (teamplay & TEAM_CAPTURE_FLAG) &&
-			time - self.lastteamset > 2)
-			if (infokey(self, "skin") != self.ctfskin) {
-				stuffcmd(self, "setinfo skin ");
-				stuffcmd(self, self.ctfskin);
+		if (self.steam > 0 && time - self.lastteamset > 2) {
+			if (teamplay & TEAM_CAPTURE_FLAG)
+				if (infokey(self, "skin") != self.ctfskin) {
+					stuffcmd(self, "setinfo skin ");
+					stuffcmd(self, self.ctfskin);
+					stuffcmd(self, "\n");
+					self.lastteamset = time;
+				}
+
+			s = GetShortTeamColor(self.steam);
+			if (infokey(self, "team") != s) {
+				stuffcmd(self, "setinfo team ");
+				stuffcmd(self, s);
 				stuffcmd(self, "\n");
 				self.lastteamset = time;
 			}
+		}
 
         // Check to see if the player has changed colors
 		if (time - self.lastteamset > 2 && pteam != self.steam)
@@ -514,9 +548,9 @@ void() TeamCheckLock =
 						bprint(PRINT_MEDIUM, " has bad color sense\n");
 					}
 					// case base respawn
-					if (self.killed != 1)
-						self.killed = 2;
+					self.killed = 99;
 					T_Damage(self,self,self,1000);  // Kill the player
+					self.killed = 2;
 					// trying to change teams counts as a suicide
 					self.suicide_count = self.suicide_count + 1;
 					logfrag(self, self); // he pays for it
@@ -541,9 +575,9 @@ void() TeamCheckLock =
 
 			if (self.steam > 0) {
 				// case base respawn
-				if (self.killed != 1)
-					self.killed = 2;
+				self.killed = 99;
 				T_Damage(self,self,self,1000);  // Kill the player
+				self.killed = 0;
 			}
 			self.frags = 0;                 // Zero out frags
 			TeamAssign();
@@ -879,6 +913,7 @@ void(entity flg) RegenFlag =
 {
 	flg.movetype = MOVETYPE_TOSS;
 	flg.solid = SOLID_TRIGGER;
+	setmodel(flg, flg.mdl);
 	setorigin(flg, flg.oldorigin);
 	flg.angles = flg.mangle;
 	flg.cnt = FLAG_AT_BASE; // it's at home base
@@ -896,9 +931,9 @@ void(entity flg) TeamCaptureReturnFlag =
 	p = find(world, classname, "player");
 	while (p != world) {
 		if (p.steam != flg.steam)
-			centerprint(p, "Enemy flag has been returned to base!\n");
+			TeamPlayerUpdate(p, "Enemy flag has been returned to base!");
 		else if (p.steam == flg.steam)
-			centerprint(p, "Your flag has been returned to base!\n");
+			TeamPlayerUpdate(p, "Your flag has been returned to base!");
 		p = find(p, classname, "player");
 	}
 };
@@ -927,6 +962,7 @@ void(entity flg) TeamDropFlag =
 		bprint(PRINT_HIGH, " ЛОСТ the блуе flag!\n"); // blue
 	else
 		bprint(PRINT_HIGH, " ЛОСТ the ред flag!\n"); // red
+	p.effects = p.effects - (p.effects & (EF_FLAG1 | EF_FLAG2));
 
 	flg.origin = p.origin - '0 0 24';
 	flg.cnt = FLAG_DROPPED;
@@ -936,6 +972,7 @@ void(entity flg) TeamDropFlag =
 	flg.flags = FL_ITEM;
 	flg.solid = SOLID_TRIGGER;
 	flg.movetype = MOVETYPE_TOSS;
+	setmodel(flg, flg.mdl);
 	setsize(self, '-16 -16 0', '16 16 74');
 	// return it after so long
 	flg.super_time = time + TEAM_CAPTURE_FLAG_RETURN_TIME;
@@ -995,7 +1032,6 @@ void() TeamCaptureFlagTouch =
 					if (self.steam == other.steam && self != other)
 						self.frags = self.frags + TEAM_CAPTURE_TEAM_BONUS;
 					if (self.steam != other.steam) {
-						centerprint(self, "Your flag was captured!\n");
 						// *XXX* EXPERT CTF
 						// reset the last_hurt_carrier variable in all enemy players, so that you don't get
 						// bonuses for defending the flag carrier if the flag carrier has already
@@ -1003,24 +1039,35 @@ void() TeamCaptureFlagTouch =
 						self.last_hurt_carrier = -5;
 					} else if (self.steam == other.steam) {
 						// done to all players on the capturing team
-						centerprint(self, "Your team captured the flag!\n");
-
 						// *XXX* EXPERT CTF
-
 						// award extra points for capture assists
 						if (self.last_returned_flag + TEAM_CAPTURE_RETURN_FLAG_ASSIST_TIMEOUT > time) {
-							bprint(PRINT_MEDIUM, self.netname);
-							bprint(PRINT_MEDIUM, " gets an assist for returning his flag!\n");
+							bprint(PRINT_HIGH, self.netname);
+							bprint(PRINT_HIGH, " gets an assist for returning his flag!\n");
 							self.frags = self.frags + TEAM_CAPTURE_RETURN_FLAG_ASSIST_BONUS;
 						}
 						if (self.last_fragged_carrier + TEAM_CAPTURE_FRAG_CARRIER_ASSIST_TIMEOUT > time) {
-							bprint(PRINT_MEDIUM, self.netname);
-							bprint(PRINT_MEDIUM, " gets an assist for fragging the flag carrier!\n");
+							bprint(PRINT_HIGH, self.netname);
+							bprint(PRINT_HIGH, " gets an assist for fragging the flag carrier!\n");
 							self.frags = self.frags + TEAM_CAPTURE_FRAG_CARRIER_ASSIST_BONUS;
 						}
 					}
 					self.player_flag = self.player_flag - (self.player_flag & ITEM_ENEMY_FLAG);
 
+					p = find(p, classname, "player");
+				}
+
+				TeamCaptureResetUpdate();
+
+				p = find(world, classname, "player");
+				while (p != world) {
+					if ((p.steam == TEAM_COLOR1 && other.steam == TEAM_COLOR2) ||
+						(p.steam == TEAM_COLOR2 && other.steam == TEAM_COLOR1))
+						TeamPlayerUpdate(p, "Your flag was captured!");
+					else if (p.steam == other.steam)
+						TeamPlayerUpdate(p, "Your team captured the flag!");
+					// remove any flags
+					p.effects = p.effects - (p.effects & (EF_FLAG1 | EF_FLAG2));
 					p = find(p, classname, "player");
 				}
 				// respawn flags
@@ -1051,8 +1098,8 @@ void() TeamCaptureFlagTouch =
 		bprint(PRINT_HIGH, " ГОТ the ред flag!\n"); // red
 	if (TEAM_CAPTURE_FLAG_BONUS)
 		other.frags = other.frags + TEAM_CAPTURE_FLAG_BONUS;
-//	centerprint(other, "YOU GOT THE ENEMY FLAG!\n\nRETURN TO BASE!\n");
-	centerprint(other, "ыоу гот тхе енемы флаг\n\nретурн то басе\n");
+//	TeamPlayerUpdate(other, "YOU GOT THE ENEMY FLAG!\n\nRETURN TO BASE!");
+	TeamPlayerUpdate(other, "ыоу гот тхе енемы флаг\n\nретурн то басе");
 	sound (other, CHAN_ITEM, self.noise, 1, ATTN_NORM);
 
 	other.player_flag = other.player_flag + ITEM_ENEMY_FLAG;
@@ -1063,17 +1110,21 @@ void() TeamCaptureFlagTouch =
 
 	// pick up the flag
 	self.cnt = FLAG_CARRIED;
-	self.movetype = MOVETYPE_NOCLIP;
 	self.solid = SOLID_NOT;
 	self.owner = other;
+	if (self.steam == TEAM_COLOR1)
+		self.owner.effects = self.owner.effects | EF_FLAG1;
+	else // must be other team
+		self.owner.effects = self.owner.effects | EF_FLAG2;
+	setmodel(self, "");
 
 	p = find(world, classname, "player");
 	while (p != world) {
 		if (p != other) {
 			if (p.steam != other.steam)
-				centerprint(p, "Your flag has been taken!\n");
+				TeamPlayerUpdate(p, "Your flag has been taken!");
 			else if (p.steam == other.steam)
-				centerprint(p, "Your team has the enemy flag!\n");
+				TeamPlayerUpdate(p, "Your team has the enemy flag!");
 		}
 		p = find(p, classname, "player");
 	}
@@ -1099,62 +1150,6 @@ void() TeamCaptureFlagThink =
 
 	if (self.cnt != FLAG_CARRIED)
 		objerror("Flag in invalid state\n");
-
-	e = self.owner;
-	if ((e.classname != "player") || (e.deadflag) ||
-		(!(e.player_flag & ITEM_ENEMY_FLAG))) {
-		TeamDropFlag(self);
-		return;
-	}
-	makevectors (e.angles);
-	v = v_forward;
-//dprint("fwd: ");
-//s = vtos(v);
-//dprint(s);
-//dprint("\n");
-//	if (v_z < 0) {
-//		v_z = (-1)*v_z;
-//		v = v + v * 1.2 * v_z;
-//	}
-//dprint("adj: ");
-//s = vtos(v);
-//dprint(s);
-//dprint("\n");
-	v_z = (-1) * v_z; // reverse z component
-
-	f = 14;
-	if (self.owner.frame >= 29 && self.owner.frame <= 40) {
-		if (self.owner.frame >= 29 && self.owner.frame <= 34) { //axpain
-			if      (self.owner.frame == 29) f = f + 2;
-			else if (self.owner.frame == 30) f = f + 8;
-			else if (self.owner.frame == 31) f = f + 12;
-			else if (self.owner.frame == 32) f = f + 11;
-			else if (self.owner.frame == 33) f = f + 10;
-			else if (self.owner.frame == 34) f = f + 4;
-		} else if (self.owner.frame >= 35 && self.owner.frame <= 40) { // pain
-			if      (self.owner.frame == 35) f = f + 2;
-			else if (self.owner.frame == 36) f = f + 10;
-			else if (self.owner.frame == 37) f = f + 10;
-			else if (self.owner.frame == 38) f = f + 8;
-			else if (self.owner.frame == 39) f = f + 4;
-			else if (self.owner.frame == 40) f = f + 2;
-		}
-	} else if (self.owner.frame >= 103 && self.owner.frame <= 118) {
-		if      (self.owner.frame >= 103 && self.owner.frame <= 104) f = f + 6;  //nailattack
-		else if (self.owner.frame >= 105 && self.owner.frame <= 106) f = f + 6;  //light
-		else if (self.owner.frame >= 107 && self.owner.frame <= 112) f = f + 7;  //rocketattack
-		else if (self.owner.frame >= 112 && self.owner.frame <= 118) f = f + 7;  //shotattack
-	}
-	self.origin = e.origin + '0 0 -16' - f*v + v_right * 22;
-
-        if (e.on_hook)
-                self.angles = e.angles + '-45 0 -45';
-        else if (!e.on_hook)
-                self.angles = e.angles + '0 0 -45';
-
-        setorigin (self, self.origin);
-	self.velocity = e.velocity;
-	self.nextthink = time + 0.01;
 };
 
 // self is player
@@ -1323,52 +1318,6 @@ void() item_flag_team2 =
 	// make it glow
 	self.nextthink = time + 0.2;	// items start after other solids
 	self.think = place_flag;
-};
-
-void() TeamCaptureSetUpdate =
-{
-	nextteamupdtime = time + TEAM_CAPTURE_UPDATE_TIME;
-};
-
-void() TeamCaptureCheckUpdate =
-{
-	local float total1, total2;
-	local entity p;
-	local string s;
-
-	if (nextteamupdtime > time || !(teamplay & TEAM_CAPTURE_FLAG))
-		return;
-
-	TeamCaptureSetUpdate();
-
-	// count up total
-	total1 = total2 = 0;
-	p = find(world, classname, "player");
-	while (p != world) {
-		if (!(p.player_flag & PF_GHOST))
-			if (p.steam == TEAM_COLOR1)
-				total1 = total1 + p.frags;
-			else if (p.steam == TEAM_COLOR2)
-				total2 = total2 + p.frags;
-		p = find(p, classname, "player");
-	}
-
-	if (total1 > total2) {
-		bprint(PRINT_MEDIUM, "ред team is leading by ");
-		s = ftos(total1 - total2);
-		bprint(PRINT_MEDIUM, s);
-		bprint(PRINT_MEDIUM, " points!\n");
-	} else if (total1 < total2) {
-		bprint(PRINT_MEDIUM, "блуе team is leading by ");
-		s = ftos(total2 - total1);
-		bprint(PRINT_MEDIUM, s);
-		bprint(PRINT_MEDIUM, " points!\n");
-	} else {
-		bprint(PRINT_MEDIUM, "блуе and ред team are tied with ");
-		s = ftos(total1);
-		bprint(PRINT_MEDIUM, s);
-		bprint(PRINT_MEDIUM, " points!\n");
-	}
 };
 
 // Team base starting locations

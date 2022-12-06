@@ -1,8 +1,13 @@
-../progs.dat
+../qwprogs.dat
 
 defs.qc
 
 teamplay.qc
+
+ctfgame.qc
+
+status.qc
+ident.qc
 
 subs.qc
 combat.qc

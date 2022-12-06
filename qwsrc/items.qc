@@ -1550,11 +1550,6 @@ void() SpawnRunes =
 	local entity oself;
 	local float i;
 
-	if (runespawned) {
-		remove(self);
-		return;
-	}
-
 	oself = self;
 
 	// choose random starting points
@@ -1573,7 +1568,33 @@ void() SpawnRunes =
 	self = SelectRuneSpawnPoint();
 	Do_DropRune(ITEM_RUNE4_FLAG);
 
+	remove(oself);
+};
+
+void() StartRuneSpawn =
+{
+	local entity rspawn;
+
+	if (runespawned || gamestart)
+		return;
+
 	runespawned = 1;
 
-	remove(oself);
+	precache_model ("progs/end1.mdl");
+	precache_model ("progs/end2.mdl");
+	precache_model ("progs/end3.mdl");
+	precache_model ("progs/end4.mdl");
+	precache_model ("progs/m_s_key.mdl");
+	precache_model ("progs/m_g_key.mdl");
+
+	precache_sound("rune/rune1.wav");
+	precache_sound("rune/rune2.wav");
+	precache_sound("rune/rune22.wav"); // special rune and quad combo
+	precache_sound("rune/rune3.wav");
+	precache_sound("rune/rune4.wav");
+
+	// spawn the runes
+	rspawn = spawn();
+	rspawn.nextthink = time + 0.1;
+	rspawn.think = SpawnRunes;
 };

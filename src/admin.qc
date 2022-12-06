@@ -52,6 +52,10 @@ float	ADMIN_PWD_3	= -1;  // change me to third number of the passwd
 float	ADMIN_KICK = 151;
 float	ADMIN_TEAMCHANGE = 152;
 float	ADMIN_CHANGEMAP = 153;
+float	ADMIN_GIVERUNE = 154;
+float	ADMIN_CAMERA = 155;
+float	ADMIN_TIMELIMIT = 156;
+float	ADMIN_FRAGLIMIT = 157;
 
 // used for admin to change maps
 void(string nmap) AdminChangeLevel =
@@ -81,33 +85,48 @@ void() CheckAdminCmd =
 	if (ADMIN_PWD_1 < 0 || ADMIN_PWD_2 < 0 || ADMIN_PWD_3 < 0)
 		return; // disabled
 
-	if (self.impulse == ADMIN_PWD_1 && self.accesslvl == 0)
+	if (self.impulse == ADMIN_PWD_1 && self.accesslvl == 0) {
 		self.accesslvl = self.accesslvl + 1;
+		return;
 
-	else if (self.impulse == ADMIN_PWD_2 && self.accesslvl == 1)
+	} else if (self.impulse == ADMIN_PWD_2 && self.accesslvl == 1) {
 		self.accesslvl = self.accesslvl + 1;
+		return;
 
-	else if (self.impulse == ADMIN_PWD_3 && self.accesslvl == 2) {
+	} else if (self.impulse == ADMIN_PWD_3 && self.accesslvl == 2) {
 		self.accesslvl = self.accesslvl + 1;
 
 		bprint(self.netname);
 		bprint(" has become a sysop\n");
 
-		sprint(self, "Admin:\nImpulse ");
+		sprint(self, "Admin Impulse Codes:\n");
 		st = ftos(ADMIN_KICK);
 		sprint(self, st);
 		sprint(self, " to kick\nImpulse ");
 		st = ftos(ADMIN_TEAMCHANGE);
 		sprint(self, st);
-		sprint(self, " to switch teamplayer\nImpulse ");
+		sprint(self, " to switch teamplayer\n");
 		st = ftos(ADMIN_CHANGEMAP);
 		sprint(self, st);
 		sprint(self, " to change map\n");
+		st = ftos(ADMIN_GIVERUNE);
+		sprint(self, st);
+		sprint(self, " to give rune\n");
+		st = ftos(ADMIN_CAMERA);
+		sprint(self, st);
+		sprint(self, " to become autocam\n");
+		st = ftos(ADMIN_TIMELIMIT);
+		sprint(self, st);
+		sprint(self, " to set timelimit\n");
+		st = ftos(ADMIN_FRAGLIMIT);
+		sprint(self, st);
+		sprint(self, " to set fraglimit\n");
 		self.accessparm = 0;
 		return;
 	}
 
 	if (self.accesslvl < 3) {
+		self.accesslvl = 0;
 		self.accessparm = 0;
 		return; // must be a sysop beyond this point
 	}
@@ -150,12 +169,12 @@ void() CheckAdminCmd =
 		if (p != world) {
 			TeamCaptureDropFlagOfPlayer(p);
 			centerprint(p, "YOU HAVE SWITCHED TEAMS!");
-			if (p.lastteam == TEAM_COLOR1 + 1) {
-				p.team = p.lastteam = TEAM_COLOR2 + 1;
-				st = ftos(TEAM_COLOR2);
+			if (p.lastteam == TEAM_COLOR1) {
+				p.team = p.lastteam = TEAM_COLOR2;
+				st = ftos(TEAM_COLOR2 - 1);
 			} else {
-				p.team = p.lastteam = TEAM_COLOR1 + 1;
-				st = ftos(TEAM_COLOR1);
+				p.team = p.lastteam = TEAM_COLOR1;
+				st = ftos(TEAM_COLOR1 - 1);
 			}
 			stuffcmd(p, "color ");
 			stuffcmd(p, st);
@@ -267,6 +286,22 @@ void() CheckAdminCmd =
 
 			self.impulse = 0;
 			return;
+
+		} else if (self.impulse == 7) {
+			self.accessparm = 10;
+
+			sprint(self, "Choose Level:\n");
+			sprint(self, "1 ctf2m1 McKinley Station\n");
+			sprint(self, "2 ctf2m2 The Warzone\n");
+			sprint(self, "3 ctf2m3 Spill the Blood\n");
+			sprint(self, "4 ctf2m4 Ruins of NeoMinonk\n");
+			sprint(self, "5 ctf2m5 Disciple War Grounds\n");
+			sprint(self, "6 ctf2m6 The Two Towers\n");
+			sprint(self, "7 ctf2m7 Gloom Castles\n");
+			sprint(self, "8 ctf2m8 Capturephobolis\n");
+
+			self.impulse = 0;
+			return;
 		}
 		sprint(self, "Invalid episode\n");
 		self.accessparm = 0;
@@ -357,6 +392,56 @@ void() CheckAdminCmd =
 		self.impulse = 0;
 		self.accessparm = 0;
 		return;
+
+	} else if (self.accessparm == 10) {
+
+		if (self.impulse == 1)		AdminChangeLevel("ctf2m1");
+		else if (self.impulse == 2)	AdminChangeLevel("ctf2m2");
+		else if (self.impulse == 3)	AdminChangeLevel("ctf2m3");
+		else if (self.impulse == 4)	AdminChangeLevel("ctf2m4");
+		else if (self.impulse == 5)	AdminChangeLevel("ctf2m5");
+		else if (self.impulse == 6)	AdminChangeLevel("ctf2m6");
+		else if (self.impulse == 7)	AdminChangeLevel("ctf2m7");
+		else if (self.impulse == 8)	AdminChangeLevel("ctf2m8");
+		else sprint(self, "Invalid map\n");
+		self.impulse = 0;
+		self.accessparm = 0;
+		return;
+
+	} else if (self.accessparm == 20) { // give rune
+		if (self.impulse == 1) {
+			self.player_flag = self.player_flag | ITEM_RUNE1_FLAG;
+			sprint(self, "You now have the Earth Magic rune\n");
+		} else if (self.impulse == 2) {
+			self.player_flag = self.player_flag | ITEM_RUNE2_FLAG;
+			sprint(self, "You now have the Black Magic rune\n");
+		} else if (self.impulse == 3) {
+			self.player_flag = self.player_flag | ITEM_RUNE3_FLAG;
+			sprint(self, "You now have the Hell Magic rune\n");
+		} else if (self.impulse == 4) {
+			self.player_flag = self.player_flag | ITEM_RUNE4_FLAG;
+			sprint(self, "You now have the Elder Magic rune\n");
+		}
+
+		self.accessparm = 0;
+		return;
+
+	} else if (self.accessparm == 21) { // time limit
+		st = ftos(self.impulse);
+		localcmd("timelimit ");
+		localcmd(st);
+		localcmd("\n");
+		self.accessparm = 0;
+		return;
+
+	} else if (self.accessparm == 22) { // frag limit
+		st = ftos(self.impulse);
+		localcmd("fraglimit ");
+		localcmd(st);
+		localcmd("\n");
+		self.accessparm = 0;
+		return;
+
 	}
 
 	self.accessparm = 0;
@@ -406,9 +491,32 @@ void() CheckAdminCmd =
 		sprint(self, "3 Netherworld\n");
 		sprint(self, "4 The Elder World\n");
 		sprint(self, "5 The Deathmatch Arenas\n");
-		sprint(self, "6 Capture Levels\n");
+		sprint(self, "6 Capture Levels - One\n");
+		sprint(self, "7 Capture Levels - Two\n");
 
 		self.accessparm = 3;
+
+	} else if (self.impulse == ADMIN_GIVERUNE) {
+		sprint(self, "Give Rune:\n");
+		sprint(self, "1 Earth Magic - Regeneration\n");
+		sprint(self, "2 Black Magic - Strength\n");
+		sprint(self, "3 Hell Magic - Haste\n");
+		sprint(self, "4 Elder Magic - Regen\n");
+
+		self.accessparm = 20;
+
+	} else if (self.impulse == ADMIN_CAMERA) {
+		self.CamState = CAM_BECOME;
+		sprint(self, "Becoming Camera\n");
+
+	} else if (self.impulse == ADMIN_TIMELIMIT) {
+		sprint(self, "Enter timelimit via impulse\n");
+		self.accessparm = 21;
+
+	} else if (self.impulse == ADMIN_FRAGLIMIT) {
+		sprint(self, "Enter fraglimit via impulse\n");
+		self.accessparm = 22;
+
 	}
 
 	self.impulse = 0;

@@ -44,7 +44,7 @@ void() plat_spawn_inside_trigger =
 
 void() plat_hit_top =
 {
-	sound (self, CHAN_VOICE, self.noise1, 1, ATTN_NORM);
+	sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise1, 1, ATTN_NORM);
 	self.state = STATE_TOP;
 	self.think = plat_go_down;
 	self.nextthink = self.ltime + 3;
@@ -52,7 +52,7 @@ void() plat_hit_top =
 
 void() plat_hit_bottom =
 {
-	sound (self, CHAN_VOICE, self.noise1, 1, ATTN_NORM);
+	sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise1, 1, ATTN_NORM);
 	self.state = STATE_BOTTOM;
 };
 
@@ -79,10 +79,14 @@ void() plat_center_touch =
 		return;
 
 	self = self.enemy;
-	if (self.state == STATE_BOTTOM)
+	if (self.state == STATE_BOTTOM) {
+		if (self.cnt > time)
+			return; // delay until going up again
 		plat_go_up ();
-	else if (self.state == STATE_TOP)
-		self.nextthink = self.ltime + 1;	// delay going down
+	}
+//	else if (self.state == STATE_TOP)
+//		self.nextthink = self.ltime + 1;	// delay going down
+	self.cnt = time + 2;
 };
 
 void() plat_outside_touch =
@@ -237,7 +241,7 @@ void() train_wait =
 	if (self.wait)
 	{
 		self.nextthink = self.ltime + self.wait;
-		sound (self, CHAN_VOICE, self.noise, 1, ATTN_NORM);
+		sound (self, CHAN_NO_PHS_ADD+CHAN_VOICE, self.noise, 1, ATTN_NORM);
 	}
 	else
 		self.nextthink = self.ltime + 0.1;

@@ -174,8 +174,6 @@ void() worldspawn =
 	lastspawn = world;
 	runespawn = world;
 	runespawned = 0;
-	capturespawned = 0;
-	teamscored = 0;
 	InitBodyQue ();
 
 // custom map attributes
@@ -188,13 +186,15 @@ void() worldspawn =
 		cvar_set ("sv_gravity", "800");
 */
 
+	if (self.model == "maps/ctfstart.bsp" || self.model == "maps/start.bsp")
+		gamestart = 1;
+	else
+		gamestart = 0;
+
 // the area based ambient sounds MUST be the first precache_sounds
 
 // player precaches
 	W_Precache ();			// get weapon precaches
-
-// Set up team notices
-	TeamCaptureSetUpdate();
 
 // sounds used from C physics code
 	precache_sound ("demon/dland2.wav");		// landing thud
@@ -303,16 +303,6 @@ void() worldspawn =
 	precache_model ("progs/zom_gib.mdl");
 
 	precache_model ("progs/v_light.mdl");
-
-
-//ZOID: rune precache
-	precache_model ("progs/end1.mdl");
-	precache_model ("progs/end2.mdl");
-	precache_model ("progs/end3.mdl");
-	precache_model ("progs/end4.mdl");
-	precache_sound ("items/protect3.wav");
-	precache_sound ("items/r_item1.wav");
-	precache_sound ("boss1/sight1.wav");
 
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is maxbright.

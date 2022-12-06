@@ -411,8 +411,8 @@ float		skill;
 
 entity	runespawn;
 float	runespawned;
-float	capturespawned;
-float	teamscored;		// non-zero if teams scored
+
+float	gamestart;		// at start
 
 //================================================
 
@@ -520,6 +520,8 @@ float	AS_MISSILE		= 4;
 .float		regen_time;		// time to next regen
 .float		rune_notice_time;	// last time we notified about multi-runes
 
+.float		voted;			// non-zero if voted
+
 // ZOID: Runes
 float		ITEM_RUNE1_FLAG		= 1;
 float		ITEM_RUNE2_FLAG		= 2;
@@ -531,9 +533,6 @@ float		ITEM_RUNE_MASK		= 15;
 float		ITEM_ENEMY_FLAG		= 16;
 // TEAMPLAY
 float		TEAM_STUFF_COLOR	= 32;
-
-.float		motd_time;
-.float		motd_count;
 
 .float		suicide_count;
 .float		killed;			// have we been killed yet
@@ -712,6 +711,12 @@ void(string s) changelevel = #70;
 void(string var, string val) cvar_set = #72;	// sets cvar.value
 
 void(entity client, string s) centerprint = #73;	// sprint, but in middle
+void(entity client, string s, string s1) centerprint2 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2) centerprint3 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2, string s3) centerprint4 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2, string s3, string s4) centerprint5 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2, string s3, string s4, string s5) centerprint6 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2, string s3, string s4, string s5, string s6) centerprint7 = #73;	// sprint, but in middle
 
 void(vector pos, string samp, float vol, float atten) ambientsound = #74;
 

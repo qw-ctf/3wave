@@ -2,6 +2,7 @@
 void() T_MissileTouch;
 void() info_player_start;
 void(entity targ, entity attacker) ClientObituary;
+void(entity who) ResistanceSound;
 
 /*SERVER
 void() monster_death_use;
@@ -132,6 +133,12 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 		damage = damage * 2;
 // RUNE
 
+//RUNE check if target has rune of Earth Magic (half damage)
+	if (targ.player_flag & ITEM_RUNE1_FLAG) {
+		damage = damage / 2;
+		ResistanceSound(targ);
+	}
+//RUNE
 
 	// *XXX* EXPERT CTF mark players who hurt the flag carrier, so they
 	// are worth more points for a while.
@@ -159,16 +166,6 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 
 	targ.armorvalue = targ.armorvalue - save;
 	take = ceil(damage-save);
-
-//RUNE check if target has rune of Earth Magic (half damage)
-	if (targ.player_flag & ITEM_RUNE1_FLAG) {
-		take = take / 2;
-		if (targ.invincible_sound < time) {
-			sound (targ, CHAN_ITEM, "items/protect3.wav", 1, ATTN_NORM);
-			targ.invincible_sound = time + 2;
-		}
-	}
-//RUNE
 
 // add to the damage total for clients, which will be sent as a single
 // message at the end of the frame

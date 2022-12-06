@@ -365,8 +365,8 @@ void() spikeshooter_use =
 	else
 	{
 		sound (self, CHAN_VOICE, "weapons/spike2.wav", 1, ATTN_NORM);
-		launch_spike (self.origin, self.movedir);
-		newmis.velocity = self.movedir * 500;
+		launch_spike (self.origin, self.movedir, 500);
+//		newmis.velocity = self.movedir * 500;
 		if (self.spawnflags & SPAWNFLAG_SUPERSPIKE)
 			newmis.touch = superspike_touch;
 	}
@@ -575,6 +575,9 @@ This is just a solid wall if not inhibitted
 */
 void() func_wall =
 {
+	if (gamestart && self.model == "*47")
+		return; // remove deathmatch only wall on start map
+
 	self.angles = '0 0 0';
 	self.movetype = MOVETYPE_PUSH;	// so it doesn't get pushed by anything
 	self.solid = SOLID_BSP;
@@ -618,7 +621,7 @@ This bmodel appears unless players have all of the episode sigils.
 void() func_bossgate =
 
 {
-	if ( (serverflags & 15) == 15)
+	if ( (serverflags & 15) == 15 || gamestart)
 		return;		// all episodes completed
 	self.angles = '0 0 0';
 	self.movetype = MOVETYPE_PUSH;	// so it doesn't get pushed by anything

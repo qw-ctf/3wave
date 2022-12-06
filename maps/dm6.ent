@@ -716,6 +716,7 @@
 {
 "origin" "1880 -168 168"
 "classname" "item_flag_team2"
+"angle" "90"
 }
 ///////
 {

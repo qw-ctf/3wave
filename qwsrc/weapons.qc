@@ -77,12 +77,15 @@ void() W_FireAxe =
 	}
 	else
 	{	// hit wall
-                sound (self, CHAN_WEAPON, "player/axhit2.wav", 1, ATTN_NORM);
-		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-		WriteByte (MSG_BROADCAST, TE_GUNSHOT);
-		WriteCoord (MSG_BROADCAST, org_x);
-		WriteCoord (MSG_BROADCAST, org_y);
-		WriteCoord (MSG_BROADCAST, org_z);
+        sound (self, CHAN_WEAPON, "player/axhit2.wav", 1, ATTN_NORM);
+
+		WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+		WriteByte (MSG_MULTICAST, TE_GUNSHOT);
+		WriteByte (MSG_MULTICAST, 3);
+		WriteCoord (MSG_MULTICAST, org_x);
+		WriteCoord (MSG_MULTICAST, org_y);
+		WriteCoord (MSG_MULTICAST, org_z);
+		multicast (org, MULTICAST_PVS);
 	}
 };
 
@@ -141,7 +144,13 @@ SpawnBlood
 */
 void(vector org, float damage) SpawnBlood =
 {
-	particle (org, VEC_ORIGIN, 73, damage*2);
+	WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+	WriteByte (MSG_MULTICAST, TE_BLOOD);
+	WriteByte (MSG_MULTICAST, 1);
+	WriteCoord (MSG_MULTICAST, org_x);
+	WriteCoord (MSG_MULTICAST, org_y);
+	WriteCoord (MSG_MULTICAST, org_z);
+	multicast (org, MULTICAST_PVS);
 };
 
 /*
@@ -171,10 +180,18 @@ Collects multiple small damages into a single damage
 entity	multi_ent;
 float	multi_damage;
 
+vector	blood_org;
+float	blood_count;
+
+vector	puff_org;
+float	puff_count;
+
 void() ClearMultiDamage =
 {
 	multi_ent = world;
 	multi_damage = 0;
+	blood_count = 0;
+	puff_count = 0;
 };
 
 void() ApplyMultiDamage =
@@ -197,6 +214,31 @@ void(entity hit, float damage) AddMultiDamage =
 	}
 	else
 		multi_damage = multi_damage + damage;
+};
+
+void() Multi_Finish =
+{
+	if (puff_count)
+	{
+		WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+		WriteByte (MSG_MULTICAST, TE_GUNSHOT);
+		WriteByte (MSG_MULTICAST, puff_count);
+		WriteCoord (MSG_MULTICAST, puff_org_x);
+		WriteCoord (MSG_MULTICAST, puff_org_y);
+		WriteCoord (MSG_MULTICAST, puff_org_z);
+		multicast (puff_org, MULTICAST_PVS);
+	}
+
+	if (blood_count)
+	{
+		WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+		WriteByte (MSG_MULTICAST, TE_BLOOD);
+		WriteByte (MSG_MULTICAST, blood_count);
+		WriteCoord (MSG_MULTICAST, blood_org_x);
+		WriteCoord (MSG_MULTICAST, blood_org_y);
+		WriteCoord (MSG_MULTICAST, blood_org_z);
+		multicast (puff_org, MULTICAST_PVS);
+	}
 };
 
 /*
@@ -224,16 +266,13 @@ void(float damage, vector dir) TraceAttack =
 
 	if (trace_ent.takedamage)
 	{
-		SpawnBlood (org, damage);
+		blood_count = blood_count + 1;
+		blood_org = org;
 		AddMultiDamage (trace_ent, damage);
 	}
 	else
 	{
-		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-		WriteByte (MSG_BROADCAST, TE_GUNSHOT);
-		WriteCoord (MSG_BROADCAST, org_x);
-		WriteCoord (MSG_BROADCAST, org_y);
-		WriteCoord (MSG_BROADCAST, org_z);
+ 		puff_count = puff_count + 1;
 	}
 };
 
@@ -256,9 +295,13 @@ void(float shotcount, vector dir, vector spread) FireBullets =
 	src_z = self.absmin_z + self.size_z * 0.7;
 
 	ClearMultiDamage ();
+
+ 	traceline (src, src + dir*2048, FALSE, self);
+ 	puff_org = trace_endpos - dir*4;
+
 	while (shotcount > 0)
 	{
-		direction = dir + crandom()*spread_x*v_right + crandom()*spread_y*v_up;
+ 		direction = dir + crandom()*spread_x*v_right + crandom()*spread_y*v_up;
 
 		traceline (src, src + direction*2048, FALSE, self);
 		if (trace_fraction != 1.0)
@@ -267,6 +310,7 @@ void(float shotcount, vector dir, vector spread) FireBullets =
 		shotcount = shotcount - 1;
 	}
 	ApplyMultiDamage ();
+	Multi_Finish ();
 };
 
 /*
@@ -352,11 +396,13 @@ void() T_MissileTouch =
 //	sound (self, CHAN_WEAPON, "weapons/r_exp3.wav", 1, ATTN_NORM);
 	self.origin = self.origin - 8*normalize(self.velocity);
 
-	WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-	WriteByte (MSG_BROADCAST, TE_EXPLOSION);
-	WriteCoord (MSG_BROADCAST, self.origin_x);
-	WriteCoord (MSG_BROADCAST, self.origin_y);
-	WriteCoord (MSG_BROADCAST, self.origin_z);
+	WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+	WriteByte (MSG_MULTICAST, TE_EXPLOSION);
+	WriteCoord (MSG_MULTICAST, self.origin_x);
+	WriteCoord (MSG_MULTICAST, self.origin_y);
+	WriteCoord (MSG_MULTICAST, self.origin_z);
+	multicast (self.origin, MULTICAST_PHS);
+
 	remove(self);
 };
 
@@ -408,6 +454,18 @@ LIGHTNING
 ===============================================================================
 */
 
+void(entity from, float damage) LightningHit =
+{
+	WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+	WriteByte (MSG_MULTICAST, TE_LIGHTNINGBLOOD);
+	WriteCoord (MSG_MULTICAST, trace_endpos_x);
+	WriteCoord (MSG_MULTICAST, trace_endpos_y);
+	WriteCoord (MSG_MULTICAST, trace_endpos_z);
+	multicast (trace_endpos, MULTICAST_PVS);
+
+	T_Damage (trace_ent, from, from, damage);
+};
+
 /*
 =================
 LightningDamage
@@ -430,8 +488,7 @@ void(vector p1, vector p2, entity from, float damage) LightningDamage =
 	traceline (p1, p2, FALSE, self);
 	if (trace_ent.takedamage)
 	{
-		particle (trace_endpos, '0 0 100', 225, damage*4);
-		T_Damage (trace_ent, from, from, damage);
+		LightningHit (from, damage);
 		if (self.classname == "player")
 		{
 			if (other.classname == "player")
@@ -443,16 +500,14 @@ void(vector p1, vector p2, entity from, float damage) LightningDamage =
 	traceline (p1 + f, p2 + f, FALSE, self);
 	if (trace_ent != e1 && trace_ent.takedamage)
 	{
-		particle (trace_endpos, '0 0 100', 225, damage*4);
-		T_Damage (trace_ent, from, from, damage);
+		LightningHit (from, damage);
 	}
 	e2 = trace_ent;
 
 	traceline (p1 - f, p2 - f, FALSE, self);
 	if (trace_ent != e1 && trace_ent != e2 && trace_ent.takedamage)
 	{
-		particle (trace_endpos, '0 0 100', 225, damage*4);
-		T_Damage (trace_ent, from, from, damage);
+		LightningHit (from, damage);
 	}
 };
 
@@ -493,15 +548,16 @@ void() W_FireLightning =
 
 	traceline (org, org + v_forward*600, TRUE, self);
 
-	WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-	WriteByte (MSG_BROADCAST, TE_LIGHTNING2);
-	WriteEntity (MSG_BROADCAST, self);
-	WriteCoord (MSG_BROADCAST, org_x);
-	WriteCoord (MSG_BROADCAST, org_y);
-	WriteCoord (MSG_BROADCAST, org_z);
-	WriteCoord (MSG_BROADCAST, trace_endpos_x);
-	WriteCoord (MSG_BROADCAST, trace_endpos_y);
-	WriteCoord (MSG_BROADCAST, trace_endpos_z);
+	WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+	WriteByte (MSG_MULTICAST, TE_LIGHTNING2);
+	WriteEntity (MSG_MULTICAST, self);
+	WriteCoord (MSG_MULTICAST, org_x);
+	WriteCoord (MSG_MULTICAST, org_y);
+	WriteCoord (MSG_MULTICAST, org_z);
+	WriteCoord (MSG_MULTICAST, trace_endpos_x);
+	WriteCoord (MSG_MULTICAST, trace_endpos_y);
+	WriteCoord (MSG_MULTICAST, trace_endpos_z);
+	multicast (org, MULTICAST_PHS);
 
 	LightningDamage (self.origin, trace_endpos + v_forward*4, self, 30);
 };
@@ -514,11 +570,13 @@ void() GrenadeExplode =
 {
 	T_RadiusDamage (self, self.owner, 120, world);
 
-	WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-	WriteByte (MSG_BROADCAST, TE_EXPLOSION);
-	WriteCoord (MSG_BROADCAST, self.origin_x);
-	WriteCoord (MSG_BROADCAST, self.origin_y);
-	WriteCoord (MSG_BROADCAST, self.origin_z);
+	WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+	WriteByte (MSG_MULTICAST, TE_EXPLOSION);
+	WriteCoord (MSG_MULTICAST, self.origin_x);
+	WriteCoord (MSG_MULTICAST, self.origin_y);
+	WriteCoord (MSG_MULTICAST, self.origin_z);
+	multicast (self.origin, MULTICAST_PHS);
+
 	remove (self);
 };
 
@@ -692,17 +750,17 @@ local float rand;
 	}
 	else
 	{
-		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-
-		if (self.classname == "wizspike")
-			WriteByte (MSG_BROADCAST, TE_WIZSPIKE);
-		else if (self.classname == "knightspike")
-			WriteByte (MSG_BROADCAST, TE_KNIGHTSPIKE);
-		else
-			WriteByte (MSG_BROADCAST, TE_SPIKE);
-		WriteCoord (MSG_BROADCAST, self.origin_x);
-		WriteCoord (MSG_BROADCAST, self.origin_y);
-		WriteCoord (MSG_BROADCAST, self.origin_z);
+		WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+  		if (self.classname == "wizspike")
+			WriteByte (MSG_MULTICAST, TE_WIZSPIKE);
+  		else if (self.classname == "knightspike")
+			WriteByte (MSG_MULTICAST, TE_KNIGHTSPIKE);
+  		else
+			WriteByte (MSG_MULTICAST, TE_SPIKE);
+		WriteCoord (MSG_MULTICAST, self.origin_x);
+		WriteCoord (MSG_MULTICAST, self.origin_y);
+		WriteCoord (MSG_MULTICAST, self.origin_z);
+		multicast (self.origin, MULTICAST_PHS);
 	}
 
 	remove(self);
@@ -732,11 +790,12 @@ local float rand;
 	}
 	else
 	{
-		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-		WriteByte (MSG_BROADCAST, TE_SUPERSPIKE);
-		WriteCoord (MSG_BROADCAST, self.origin_x);
-		WriteCoord (MSG_BROADCAST, self.origin_y);
-		WriteCoord (MSG_BROADCAST, self.origin_z);
+		WriteByte (MSG_MULTICAST, SVC_TEMPENTITY);
+		WriteByte (MSG_MULTICAST, TE_SUPERSPIKE);
+		WriteCoord (MSG_MULTICAST, self.origin_x);
+		WriteCoord (MSG_MULTICAST, self.origin_y);
+		WriteCoord (MSG_MULTICAST, self.origin_z);
+		multicast (self.origin, MULTICAST_PHS);
 	}
 
 	remove(self);
@@ -1347,16 +1406,17 @@ void() ImpulseCommands =
 	else if (self.impulse == 23)
 		TeamFlagStatusReport();
 
-	else if (self.impulse == 60)
-		if (self.flags & FL_FLY) {
-			self.flags = self.flags - FL_FLY;
-			self.movetype = MOVETYPE_WALK;
-			sprint(self, PRINT_HIGH, "Fly disabled: walk\n");
-		} else {
-			self.flags = self.flags + FL_FLY;
-			self.movetype = MOVETYPE_FLY;
-			sprint(self, PRINT_HIGH, "Fly enabled: fly\n");
-		}
+	else if (self.impulse == 141)
+		identify_player();
+
+	else if (self.impulse == 70) {
+		self.statoff = !self.statoff; // status bar toggle
+		if (self.statoff)
+			sprint(self, PRINT_HIGH, "Status bar off.\n");
+		else
+			sprint(self, PRINT_HIGH, "Status bar on.\n");
+	}
+
 
   	self.impulse = 0;
 };
@@ -1432,6 +1492,23 @@ void() W_WeaponFrame =
 
 /*
 ========
+Resistancesound
+
+Plays sound if needed
+========
+*/
+void(entity who) ResistanceSound =
+{
+// RUNE play resistance sound if player has Earth Magic
+	if (who.player_flag & ITEM_RUNE1_FLAG) {
+		if (who.invincible_sound < time) {
+			who.invincible_sound = time + 1;
+			sound(who, CHAN_BODY, "rune/rune1.wav", 1, ATTN_NORM);
+		}
+	}
+};
+/*
+========
 SuperDamageSound
 
 Plays sound if needed
@@ -1440,13 +1517,27 @@ Plays sound if needed
 void() SuperDamageSound =
 {
 // RUNE play super damage sound if player has Black Magic, too
-	if (self.super_damage_finished > time || (self.player_flag & ITEM_RUNE2_FLAG)) {
+	if ((self.player_flag & ITEM_RUNE2_FLAG) &&
+		(self.super_damage_finished > time)) {
+		if (self.super_sound < time) {
+			self.super_sound = time + 1;
+			sound (self, CHAN_BODY, "rune/rune22.wav", 1, ATTN_NORM);
+		}
+	}
+
+	if (self.super_damage_finished > time) {
 		if (self.super_sound < time) {
 			self.super_sound = time + 1;
 			sound (self, CHAN_BODY, "items/damage3.wav", 1, ATTN_NORM);
 		}
 	}
-	return;
+
+	if (self.player_flag & ITEM_RUNE2_FLAG) {
+		if (self.super_sound < time) {
+			self.super_sound = time + 1;
+			sound (self, CHAN_BODY, "rune/rune2.wav", 1, ATTN_NORM);
+		}
+	}
 };
 
 /*
@@ -1462,10 +1553,9 @@ void() RegenerationSound =
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
 		if (self.regeneration_sound < time) {
 			self.regeneration_sound = time + 1;
-			sound(self, CHAN_BODY, "items/r_item1.wav", 1, ATTN_NORM);
+			sound(self, CHAN_BODY, "rune/rune4.wav", 1, ATTN_NORM);
 		}
 	}
-	return;
 };
 
 /*
@@ -1480,10 +1570,8 @@ void() HasteSound =
 // RUNE play haste (Chthon's roar) sound if player has Hell Magic
 	if (self.player_flag & ITEM_RUNE3_FLAG) {
 		if (self.haste_sound < time) {
-			self.haste_sound = time + 2;
-			sound(self, CHAN_BODY, "boss1/sight1.wav", 1, ATTN_NORM);
+			self.haste_sound = time + 1;
+			sound(self, CHAN_BODY, "rune/rune3.wav", 1, ATTN_NORM);
 		}
 	}
-	return;
 };
-

@@ -1458,7 +1458,7 @@ void() RuneTouch =
 		return;
 	if (other.player_flag & ITEM_RUNE_MASK) {
 		if (other.rune_notice_time < time) {
-			centerprint(other, "You already have a rune.\n");
+			TeamPlayerUpdate(other, "You already have a rune.");
 			other.rune_notice_time = time + 5;
 		}
 		return; // one per customer
@@ -1472,28 +1472,28 @@ void() RuneTouch =
 			bprint(other.netname);
 			bprint(" got the rune of Åבעפט Íבחיד!\n");
 		}
-		centerprint(other, "Åבעפט Íבחיד!\n\nÒוףיףפבמדו");
+		TeamPlayerUpdate(other, "Åבעפט Íבחיד!    Òוףיףפבמדו");
 	}
 	if (self.player_flag & ITEM_RUNE2_FLAG) {
 		if (teamplay == 0) {
 			bprint(other.netname);
 			bprint(" got the rune of Âלבדכ Íבחיד!\n");
 		}
-		centerprint(other, "Âלבדכ Íבחיד!\n\nÓפעומחפט");
+		TeamPlayerUpdate(other, "Âלבדכ Íבחיד!    Óפעומחפט");
 	}
 	if (self.player_flag & ITEM_RUNE3_FLAG) {
 		if (teamplay == 0) {
 			bprint(other.netname);
 			bprint(" got the rune of Èולל Íבחיד!\n");
 		}
-		centerprint(other, "Èולל Íבחיד!\n\nÈבףפו");
+		TeamPlayerUpdate(other, "Èולל Íבחיד!    Èבףפו");
 	}
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
 		if (teamplay == 0) {
 			bprint(other.netname);
 			bprint(" got the rune of Åלהוע Íבחיד!\n");
 		}
-		centerprint(other, "Åלהוע Íבחיד!\n\nÒוחומועבפיןמ");
+		TeamPlayerUpdate(other, "Åלהוע Íבחיד!    Òוחומועבפיןמ");
 	}
 
 	// backpack touch sound
@@ -1581,11 +1581,6 @@ void() SpawnRunes =
 	local entity oself;
 	local float i;
 
-	if (runespawned) {
-		remove(self);
-		return;
-	}
-
 	oself = self;
 
 	// choose random starting points
@@ -1604,7 +1599,39 @@ void() SpawnRunes =
 	self = SelectRuneSpawnPoint();
 	Do_DropRune(ITEM_RUNE4_FLAG);
 
-	runespawned = 1;
-
 	remove(oself);
 };
+
+void() StartRuneSpawn =
+{
+	local entity rspawn;
+
+	if (runespawned || gamestart)
+		return;
+
+	runespawned = 1;
+
+	precache_model ("progs/end1.mdl");
+	precache_model ("progs/end2.mdl");
+	precache_model ("progs/end3.mdl");
+	precache_model ("progs/end4.mdl");
+
+	if (cvar("teamplay") & TEAM_CAPTURE_CUSTOM) {
+		precache_sound("rune/rune1.wav");
+		precache_sound("rune/rune2.wav");
+		precache_sound("rune/rune22.wav"); // special rune and quad combo
+		precache_sound("rune/rune3.wav");
+		precache_sound("rune/rune4.wav");
+	} else {
+		precache_sound("boss1/sight1.wav");
+		precache_sound("items/r_item1.wav");
+		precache_sound("items/damage3.wav");
+		precache_sound("items/protect3.wav");
+	}
+
+	// spawn the runes
+	rspawn = spawn();
+	rspawn.nextthink = time + 0.1;
+	rspawn.think = SpawnRunes;
+};
+

@@ -79,10 +79,17 @@ void() plat_center_touch =
 		return;
 
 	self = self.enemy;
-	if (self.state == STATE_BOTTOM)
+
+
+	if (self.state == STATE_BOTTOM) {
+		if (self.cnt > time)
+			return; // delay until going up again
 		plat_go_up ();
-	else if (self.state == STATE_TOP)
-		self.nextthink = self.ltime + 1;	// delay going down
+		return;
+	}
+//	else if (self.state == STATE_TOP)
+//		self.nextthink = self.ltime + 1;	// delay going down
+	self.cnt = time + 2;
 };
 
 void() plat_outside_touch =
@@ -93,7 +100,6 @@ void() plat_outside_touch =
 	if (other.health <= 0)
 		return;
 
-//dprint ("plat_outside_touch\n");
 	self = self.enemy;
 	if (self.state == STATE_TOP)
 		plat_go_down ();
@@ -109,8 +115,6 @@ void() plat_trigger_use =
 
 void() plat_crush =
 {
-//dprint ("plat_crush\n");
-
 	T_Damage (other, self, self, 1);
 
 	if (self.state == STATE_UP)

@@ -1676,27 +1676,27 @@
 }
 {
 "classname" "func_wall"
-"spawnflags" "3072"
+//"spawnflags" "3072"
 "model" "*33"
 }
 {
 "classname" "func_wall"
-"spawnflags" "3072"
+//"spawnflags" "3072"
 "model" "*34"
 }
 {
 "classname" "func_wall"
-"spawnflags" "3072"
+//"spawnflags" "3072"
 "model" "*35"
 }
 {
 "classname" "func_wall"
-"spawnflags" "3072"
+//"spawnflags" "3072"
 "model" "*36"
 }
 {
 "classname" "func_wall"
-"spawnflags" "3072"
+//"spawnflags" "3072"
 "model" "*37"
 }
 {

@@ -140,8 +140,9 @@ void()	player_run =[	$rockrun1,	player_run	]
 
 void()muzzleflash =
 {
-	WriteByte (MSG_BROADCAST, SVC_MUZZLEFLASH);
-	WriteEntity (MSG_BROADCAST, self);
+	WriteByte (MSG_MULTICAST, SVC_MUZZLEFLASH);
+	WriteEntity (MSG_MULTICAST, self);
+	multicast (self.origin, MULTICAST_PVS);
 };
 
 

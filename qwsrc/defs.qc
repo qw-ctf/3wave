@@ -355,6 +355,8 @@ float	TE_KNIGHTSPIKE	= 8;
 float	TE_LIGHTNING3	= 9;
 float	TE_LAVASPLASH	= 10;
 float	TE_TELEPORT		= 11;
+float	TE_BLOOD		= 12;
+float	TE_LIGHTNINGBLOOD = 13;
 
 // sound channels
 // channel 0 never willingly overrides
@@ -364,6 +366,7 @@ float	CHAN_WEAPON		= 1;
 float	CHAN_VOICE		= 2;
 float	CHAN_ITEM		= 3;
 float	CHAN_BODY		= 4;
+float	CHAN_NO_PHS_ADD = 8;	// ie: CHAN_BODY+CHAN_NO_PHS_ADD
 
 float	ATTN_NONE		= 0;
 float	ATTN_NORM		= 1;
@@ -383,6 +386,8 @@ float	UPDATE_TEMP		= 3;
 //float	EF_MUZZLEFLASH 	= 2;
 float	EF_BRIGHTLIGHT 	= 4;
 float	EF_DIMLIGHT 	= 8;
+float	EF_FLAG1	 	= 16;
+float	EF_FLAG2	 	= 32;
 
 
 // messages
@@ -390,6 +395,7 @@ float	MSG_BROADCAST	= 0;		// unreliable to all
 float	MSG_ONE			= 1;		// reliable to one (msg_entity)
 float	MSG_ALL			= 2;		// reliable to all
 float	MSG_INIT		= 3;		// write to the init string
+float	MSG_MULTICAST	= 4;		// for multicast() call
 
 // message levels
 float	PRINT_LOW		= 0;		// pickup messages
@@ -397,10 +403,18 @@ float	PRINT_MEDIUM	= 1;		// death messages
 float	PRINT_HIGH		= 2;		// critical messages
 float	PRINT_CHAT		= 3;		// also goes to chat console
 
+// multicast sets
+float	MULTICAST_ALL	= 0;		// every client
+float	MULTICAST_PHS	= 1;		// within hearing
+float	MULTICAST_PVS	= 2;		// within sight
+float	MULTICAST_ALL_R	= 3;		// every client, reliable
+float	MULTICAST_PHS_R	= 4;		// within hearing, reliable
+float	MULTICAST_PVS_R	= 5;		// within sight, reliable
+
 entity	runespawn;
 float	runespawned;
-float	capturespawned;
-float	teamscored;		// non-zero if teams scored
+
+float	gamestart;		// at start
 
 //================================================
 
@@ -408,6 +422,7 @@ float	teamscored;		// non-zero if teams scored
 // globals
 //
 float	movedist;
+float	gameover;		// set when a rule exits
 
 string	string_null;	// null string, nothing should be held here
 float	empty_float;
@@ -527,6 +542,8 @@ float	AS_MISSILE		= 4;
 .float		regen_time;		// time to next regen
 .float		rune_notice_time;	// last time we notified about multi-runes
 
+.float		voted;			// non-zero if voted
+
 // ZOID: Runes
 float		ITEM_RUNE1_FLAG		= 1;
 float		ITEM_RUNE2_FLAG		= 2;
@@ -542,7 +559,6 @@ float		TEAM_STUFF_COLOR	= 32;
 // Connection tracking
 float		PF_GHOST			= 64;
 
-.float		motd_time;
 .float		motd_count;
 
 .float		suicide_count;
@@ -680,7 +696,7 @@ vector(entity e, float speed) aim = #44;		// returns the shooting vector
 float(string s) cvar = #45;						// return cvar.value
 void(string s) localcmd = #46;					// put string into local que
 entity(entity e) nextent = #47;					// for looping through all ents
-void(vector o, vector d, float color, float count) particle = #48;// start a particle effect
+// #48 was removed
 void() ChangeYaw = #49;						// turn towards self.ideal_yaw
 											// at self.yaw_speed
 // #50 was removed
@@ -711,6 +727,12 @@ void(string s) changelevel = #70;
 void(string var, string val) cvar_set = #72;	// sets cvar.value
 
 void(entity client, string s) centerprint = #73;	// sprint, but in middle
+void(entity client, string s, string s1) centerprint2 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2) centerprint3 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2, string s3) centerprint4 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2, string s3, string s4) centerprint5 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2, string s3, string s4, string s5) centerprint6 = #73;	// sprint, but in middle
+void(entity client, string s, string s1, string s2, string s3, string s4, string s5, string s6) centerprint7 = #73;	// sprint, but in middle
 
 void(vector pos, string samp, float vol, float atten) ambientsound = #74;
 
@@ -725,6 +747,8 @@ void(entity killer, entity killee) logfrag = #79;	// add to stats
 
 string(entity e, string key) infokey	= #80;	// get a key value (world = serverinfo)
 float(string s) stof				= #81;		// convert string to float
+void(vector where, float set) multicast	= #82;	// sends the temp message to a set
+												// of clients, possibly in PVS or PHS
 
 //============================================================================
 

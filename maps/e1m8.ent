@@ -2597,6 +2597,7 @@
 {
 "origin" "592 -150 300"
 "classname" "item_flag_team1"
+"angle" "180"
 }
 {
 "angle" "270"

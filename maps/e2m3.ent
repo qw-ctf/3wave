@@ -1900,11 +1900,11 @@
 "classname" "item_rockets"
 "origin" "-96 272 -384"
 }
-{
-"classname" "weapon_supernailgun"
-"origin" "-1200 208 -112"
-"spawnflags" "1792"
-}
+//{
+//"classname" "weapon_supernailgun"
+//"origin" "-1200 208 -112"
+//"spawnflags" "1792"
+//}
 {
 "classname" "func_door_secret"
 "spawnflags" "2051"

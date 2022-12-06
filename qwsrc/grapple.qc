@@ -14,6 +14,7 @@ Morning Star. Depending on latency, performance should be near exact.
 
 // prototypes for WEAPONS.QC functions
 float() crandom;
+void(vector org, float damage) SpawnBlood;
 
 //
 // Reset_Grapple - Removes the hook and resets its owner's state.
@@ -39,8 +40,6 @@ void (entity rhook) Reset_Grapple =
 //
 void () Grapple_Track =
 {
-        local   vector  spray;
-
         // Release dead targets
         if (self.enemy.classname == "player" && self.enemy.health <= 0)
         {
@@ -65,10 +64,7 @@ void () Grapple_Track =
 			sound (self, CHAN_WEAPON, "blob/land1.wav", 1, ATTN_NORM);
 			T_Damage (self.enemy, self, self.owner, 1);
 			makevectors (self.v_angle);
-			spray_x = 100 * crandom();
-			spray_y = 100 * crandom();
-			spray_z = 100 * crandom() + 50;
-			particle (self.enemy.origin, spray, 73, 20);// avoid a call to spawnblood
+			SpawnBlood(self.enemy.origin, 1);
         }
 
         // If the hook is not attached to the player, constantly copy

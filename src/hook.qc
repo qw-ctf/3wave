@@ -86,9 +86,21 @@ void () HookVanish =
                 self.enemy.attack_finished = time + 0.1;
 */
 		if (teamplay & TEAM_CAPTURE_CUSTOM)
-			sound(self.owner, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NONE);
+			sound(self.owner, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
         BreakChain (self);
         remove (self);
+};
+
+void() UnHookPlayer =
+{
+	local entity oself;
+
+	if (self.hook_out) {
+		oself = self;
+		self = self.goalentity;
+		HookVanish();
+		self = oself;
+	}
 };
 
 /**********\
@@ -224,6 +236,7 @@ void() W_FireChain =
         self.hook_out = TRUE;
         hook = spawn ();
         hook.owner = self;
+		self.goalentity = hook;
         hook.movetype = MOVETYPE_FLY;
         hook.solid = SOLID_BBOX;
 
