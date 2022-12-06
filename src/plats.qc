@@ -121,8 +121,7 @@ void() plat_crush =
 		plat_go_down ();
 	else if (self.state == STATE_DOWN)
 		plat_go_up ();
-	else
-		objerror ("plat_crush: bad self.state\n");
+	//objerror ("plat_crush: bad self.state\n");
 };
 
 void() plat_use =

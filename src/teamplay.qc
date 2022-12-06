@@ -350,14 +350,14 @@ float(float t) TeamGetShirt =
 		team1shirt = team1shirt + 1;
 		if (team1shirt > 14)
 			team1shirt = 0;
-		if (team1shirt == TEAM_COLOR2)
+		if (team1shirt == TEAM_COLOR2 - 1)
 			team1shirt = team2shirt + 1;
 		return team1shirt;
 	} else { // color2
 		team2shirt = team2shirt + 1;
 		if (team2shirt > 14)
 			team2shirt = 0;
-		if (team2shirt == TEAM_COLOR1)
+		if (team2shirt == TEAM_COLOR1 - 1)
 			team2shirt = team1shirt + 1;
 		return team2shirt;
 	}

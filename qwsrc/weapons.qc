@@ -1,6 +1,7 @@
 /*
 */
 void () player_chain1; // prototype from player.qc
+void () player_chain3; // prototype from player.qc
 
 void (entity targ, entity inflictor, entity attacker, float damage) T_Damage;
 void () player_run;
@@ -374,6 +375,10 @@ void() T_MissileTouch =
 	if (other == self.owner)
 		return;		// don't explode on owner
 
+	if (self.cnt)
+		return;
+
+	self.cnt = 1;
 	if (pointcontents(self.origin) == CONTENT_SKY)
 	{
 		remove(self);
@@ -427,6 +432,7 @@ void() W_FireRocket =
 	newmis.movetype = MOVETYPE_FLYMISSILE;
 	newmis.solid = SOLID_BBOX;
 	newmis.classname = "missile";
+	newmis.cnt = 0;
 
 // set newmis speed
 
@@ -584,8 +590,13 @@ void() GrenadeTouch =
 {
 	if (other == self.owner)
 		return;		// don't explode on owner
+
+	if (self.cnt)
+		return;
+
 	if (other.takedamage == DAMAGE_AIM)
 	{
+		self.cnt = 1;
 		GrenadeExplode();
 		return;
 	}
@@ -613,6 +624,7 @@ void() W_FireGrenade =
 	newmis.movetype = MOVETYPE_BOUNCE;
 	newmis.solid = SOLID_BBOX;
 	newmis.classname = "grenade";
+	newmis.cnt = 0;
 
 // set newmis speed
 
@@ -662,6 +674,7 @@ void(vector org, vector dir) launch_spike =
 	newmis.owner = self;
 	newmis.movetype = MOVETYPE_FLYMISSILE;
 	newmis.solid = SOLID_BBOX;
+	newmis.cnt = 0;
 
 	newmis.angles = vectoangles(dir);
 
@@ -733,8 +746,13 @@ local float rand;
 	if (other == self.owner)
 		return;
 
+	if (self.cnt)
+		return;
+
 	if (other.solid == SOLID_TRIGGER)
 		return;	// trigger field, do nothing
+
+	self.cnt = 1;
 
 	if (pointcontents(self.origin) == CONTENT_SKY)
 	{
@@ -773,8 +791,13 @@ local float rand;
 	if (other == self.owner)
 		return;
 
+	if (self.cnt)
+		return;
+
 	if (other.solid == SOLID_TRIGGER)
 		return;	// trigger field, do nothing
+
+	self.cnt = 1;
 
 	if (pointcontents(self.origin) == CONTENT_SKY)
 	{
@@ -826,7 +849,7 @@ void() W_SetCurrentAmmo =
         else if (self.weapon == IT_GRAPPLE)
 	{
 		self.currentammo = 0;
-                self.weaponmodel = "progs/v_star.mdl";
+		self.weaponmodel = "progs/v_star.mdl";
 		self.weaponframe = 0;
 	}
 	else if (self.weapon == IT_SHOTGUN)
@@ -922,7 +945,7 @@ float() W_CheckNoAmmo =
 	if (self.weapon == IT_AXE)
 		return TRUE;
 
-        if (self.weapon == IT_GRAPPLE)
+	if (self.weapon == IT_GRAPPLE)
 		return TRUE;
 
 	self.weapon = W_BestWeapon ();
@@ -959,11 +982,13 @@ void() W_Attack =
 	makevectors	(self.v_angle);			// calculate forward angle for velocity
 	self.show_hostile = time + 1;	// wake monsters up
 
-        if (self.weapon == IT_GRAPPLE && !(self.hook_out) )
-        {
-                player_chain1 ();
-                self.attack_finished = time + 0.1;
-        }
+	if (self.weapon == IT_GRAPPLE) {
+		if (self.hook_out)
+			player_chain3 ();
+		else
+			player_chain1 ();
+		self.attack_finished = time + 0.1;
+	}
 
 	if (self.weapon == IT_AXE)
 	{
@@ -1057,29 +1082,23 @@ void() W_ChangeWeapon =
 	it = self.items;
 	am = 0;
 
-        if (self.impulse == 1 && self.weapon)
-        {
-                if (self.weapon == IT_AXE)
-                {
-                        fl = IT_GRAPPLE;
+	if (self.impulse == 1 && self.weapon) {
+		if (self.weapon == IT_AXE) {
+			fl = IT_GRAPPLE;
 
-                        if (self.hook_out)
-                                Reset_Grapple(self.hook);
-                }
-                else if (self.weapon != IT_AXE)
-                        fl = IT_AXE;
-	}
-        else if (self.impulse == 22)
-        {
-                        fl = IT_GRAPPLE;
-                        sprint (self, PRINT_HIGH , "Grappling Hook Selected\n");
-                        if (self.hook_out)
-                                sound (self, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
+			if (self.hook_out)
+				Reset_Grapple(self.hook);
+		} else if (self.weapon != IT_AXE)
+			fl = IT_AXE;
+	} else if (self.impulse == 22) {
+		fl = IT_GRAPPLE;
+		sprint (self, PRINT_HIGH , "Grappling Hook Selected\n");
+		if (self.hook_out)
+			sound (self, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
 
-                        self.hook_out = FALSE;
-                        self.on_hook = FALSE;
-        }
-        else if (self.impulse == 31) {
+		self.hook_out = FALSE;
+		self.on_hook = FALSE;
+	} else if (self.impulse == 31) {
 		fl = IT_AXE;
 	} else if (self.impulse == 2 || self.impulse == 32) {
 		fl = IT_SHOTGUN;
@@ -1180,25 +1199,20 @@ void() CycleWeaponCommand =
 {
 	local	float	it, am;
 
-        if (self.hook_out)// no changing weapons when hook is out.
-                return;
-
-
-
 	it = self.items;
 	self.impulse = 0;
 
 //McBain: save current weapon
-        self.previous_weapon = self.weapon;
+	self.previous_weapon = self.weapon;
 
 	while (1)
 	{
 		am = 0;
 
 		if (self.weapon == IT_LIGHTNING) {
-                        self.weapon = IT_GRAPPLE;
-                } else if (self.weapon == IT_GRAPPLE){
-                        self.weapon = IT_AXE;
+			self.weapon = IT_GRAPPLE;
+		} else if (self.weapon == IT_GRAPPLE) {
+			self.weapon = IT_AXE;
 		} else if (self.weapon == IT_AXE) {
 			self.weapon = IT_SHOTGUN;
 			if (self.ammo_shells < 1)
@@ -1249,10 +1263,6 @@ void() CycleWeaponReverseCommand =
 {
 	local	float	it, am;
 
-        if (self.hook_out)// no changing weapons when hook is out.
-                return;
-
-
 	it = self.items;
 	self.impulse = 0;
 
@@ -1299,16 +1309,11 @@ void() CycleWeaponReverseCommand =
 			if (self.ammo_shells < 1)
 				am = 1;
 		}
-		else if (self.weapon == IT_SHOTGUN)
-		{
-                        self.weapon = IT_AXE;
-		}
-                else if (self.weapon == IT_AXE)
-		{
-                        self.weapon = IT_GRAPPLE;
-		}
-                else if (self.weapon == IT_GRAPPLE)
-		{
+		else if (self.weapon == IT_SHOTGUN) {
+			self.weapon = IT_AXE;
+		} else if (self.weapon == IT_AXE) {
+			self.weapon = IT_GRAPPLE;
+		} else if (self.weapon == IT_GRAPPLE) {
 			self.weapon = IT_LIGHTNING;
 			if (self.ammo_cells < 1)
 				am = 1;
@@ -1484,7 +1489,7 @@ Called every frame so impulse events can be handled as well as possible
 */
 void() W_WeaponFrame =
 {
-        if (time < self.attack_finished)
+	if (time < self.attack_finished)
 		return;
 
 //ZOID: Only call ImpulseCommands() if needed!  This saves a good chunk
@@ -1495,7 +1500,7 @@ void() W_WeaponFrame =
 		ImpulseCommands ();
 
 // check for attack
-        if (self.button0 && !(self.fire_held_down) )
+	if (self.button0)
 	{
 		SuperDamageSound ();
 		W_Attack ();

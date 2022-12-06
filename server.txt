@@ -535,6 +535,12 @@ Redundant Message Removal
    armor."  This was just cluttering up the message stream and isn't needed
    since pickups are already signified by a flash and an audio cue.
 
+What's new in 4.20
+------------------
+
+- just bug fixes for server crashes
+- impulse 10&12 fixed for grapple
+
 What's new in 4.00
 ------------------
 

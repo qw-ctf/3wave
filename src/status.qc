@@ -15,13 +15,13 @@ void() MOTD =
 	if (self.motd_count < 4) {
 		self.motd_count = self.motd_count + 1;
 		if (gamestart) {
-			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.1\n\nцаптуре тхе флаг!\n\nChoose an exit...\n"); //red
+			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.2\n\nцаптуре тхе флаг!\n\nChoose an exit...\n"); //red
 			return;
 		}
 		if (self.team == TEAM_COLOR1)
-			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.1\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
+			centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.2\n\nцаптуре тхе флаг!\n\nYou are ред team\n"); //red
 		else
-			centerprint(self, "Welcome!\nRunning Threewave CTF 4.1\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
+			centerprint(self, "Welcome!\nRunning Threewave CTF 4.2\n\nцаптуре тхе флаг!\n\nYou are блуе team"); //blue
 		return;
 	}
 	sprint(self, "Impulse 70 to turn off status bar\n");
@@ -34,7 +34,7 @@ void() MOTD_ChooseTeam =
 {
 	if (self.motd_count < 6) {
 		self.motd_count = self.motd_count + 1;
-		centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.1\n\nцаптуре тхе флаг!\n\nPress 1 for ред team\nPress 2 for блуе team\nOr Press Jump for automatic team\n");
+		centerprint(self, "Welcome!\nRunning ThreeWave CTF 4.2\n\nцаптуре тхе флаг!\n\nPress 1 for ред team\nPress 2 for блуе team\nOr Press Jump for automatic team\n");
 		return;
 	}
 	self.motd_count = 0;

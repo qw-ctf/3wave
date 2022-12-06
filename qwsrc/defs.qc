@@ -309,6 +309,11 @@ float	IT_INVULNERABILITY		= 1048576;
 float	IT_SUIT					= 2097152;
 float	IT_QUAD					= 4194304;
 
+float	IT_SIGIL1				= 268435456;
+float	IT_SIGIL2				= 536870912;
+float	IT_SIGIL3				= 1073741824;
+float	IT_SIGIL4				= 2147483648;
+
 // point content values
 
 float	CONTENT_EMPTY			= -1;
@@ -781,7 +786,5 @@ float(entity targ, entity inflictor) CanDamage;
 .float  on_hook;// TRUE if hook is anchored and client is being pulled
 .float  hook_out;// TRUE if hook is in use
 .entity hook;// pointer to client's hook
-.float  fire_held_down;// flag - TRUE if player is still holding down the
-                       // fire button after throwing a hook.
 
 

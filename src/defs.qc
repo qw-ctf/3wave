@@ -289,7 +289,7 @@ float	IT_SUPER_NAILGUN		= 8;
 float	IT_GRENADE_LAUNCHER		= 16;
 float	IT_ROCKET_LAUNCHER		= 32;
 float	IT_LIGHTNING			= 64;
-float	IT_EXTRA_WEAPON			= 128;
+float	IT_HOOK					= 128;
 
 float	IT_SHELLS				= 256;
 float	IT_NAILS				= 512;
@@ -308,7 +308,11 @@ float	IT_INVISIBILITY			= 524288;
 float	IT_INVULNERABILITY		= 1048576;
 float	IT_SUIT					= 2097152;
 float	IT_QUAD					= 4194304;
-float	IT_HOOK					= 8388608;
+
+float	IT_SIGIL1				= 268435456;
+float	IT_SIGIL2				= 536870912;
+float	IT_SIGIL3				= 1073741824;
+float	IT_SIGIL4				= 2147483648;
 
 // point content values
 

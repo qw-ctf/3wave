@@ -381,6 +381,10 @@ void() TeamSkinSet =
 		self.ctfskin = "ctfb1";
 	else if (self.ctfskinno == 4)
 		self.ctfskin = "ctfb2";
+	else if (self.steam == TEAM_COLOR1)
+		self.ctfskin = "ctfr1";
+	else if (self.steam == TEAM_COLOR2)
+		self.ctfskin = "ctfb1";
 	else
 		self.ctfskin = "base";
 };
@@ -609,7 +613,6 @@ void() TeamCheckLock =
 						self.steam = -1;
 				}
 			} else
-				self.steam = pteam;
 
 			// If teamlock is turned off, don't do anything more.
 			if ( !(teamplay & TEAM_LOCK_COLORS) )
@@ -621,6 +624,8 @@ void() TeamCheckLock =
 				T_Damage(self,self,self,1000);  // Kill the player
 				self.killed = 0;
 			}
+
+			self.steam = pteam;
 			self.frags = 0;                 // Zero out frags
 			TeamAssign();
         }
@@ -1062,7 +1067,7 @@ void() TeamCaptureFlagTouch =
 				other.items = other.items - (other.items & (IT_KEY1 | IT_KEY2));
 
 				last_flag_capture = time;
-				last_capture_team = other.team;
+				last_capture_team = other.steam;
 
 				sound (other, CHAN_VOICE, "misc/flagcap.wav", 1, ATTN_NONE);
 

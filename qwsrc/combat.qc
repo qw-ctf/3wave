@@ -186,16 +186,18 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 	}
 
 // check for godmode or invincibility
-	if (targ.flags & FL_GODMODE)
-		return;
-	if (targ.invincible_finished >= time)
-	{
-		if (self.invincible_sound < time)
+	if (self.killed != 99) { // god or 666 doesn't save your from team change
+		if (targ.flags & FL_GODMODE)
+			return;
+		if (targ.invincible_finished >= time)
 		{
-			sound (targ, CHAN_ITEM, "items/protect3.wav", 1, ATTN_NORM);
-			self.invincible_sound = time + 2;
+			if (self.invincible_sound < time)
+			{
+				sound (targ, CHAN_ITEM, "items/protect3.wav", 1, ATTN_NORM);
+				self.invincible_sound = time + 2;
+			}
+			return;
 		}
-		return;
 	}
 
 // team play damage avoidance

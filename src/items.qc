@@ -368,6 +368,23 @@ float(float w) RankForWeapon =
 	return 7;
 };
 
+float (float w) WeaponCode =
+{
+	if (w == IT_SUPER_SHOTGUN)
+		return 3;
+	if (w == IT_NAILGUN)
+		return 4;
+	if (w == IT_SUPER_NAILGUN)
+		return 5;
+	if (w == IT_GRENADE_LAUNCHER)
+		return 6;
+	if (w == IT_ROCKET_LAUNCHER)
+		return 7;
+	if (w == IT_LIGHTNING)
+		return 8;
+	return 1;
+};
+
 /*
 =============
 Deathmatch_Weapon
@@ -506,10 +523,7 @@ void() weapon_touch =
 //McBain: temp store old weapon
 	prevweapon = self.weapon;
 
-	if (!deathmatch)
-		self.weapon = new;
-	else
-		Deathmatch_Weapon (old, new);
+	Deathmatch_Weapon (old, new);
 
 //McBain: save previous weapon if different
 	if (self.weapon != prevweapon)
@@ -1356,10 +1370,7 @@ void() BackpackTouch =
 	self = other;
 
 // change to the weapon
-	if (!deathmatch)
-		self.weapon = new;
-	else
-		Deathmatch_Weapon (old, new);
+	Deathmatch_Weapon (old, new);
 
 	W_SetCurrentAmmo ();
 };
@@ -1468,6 +1479,7 @@ void() RuneTouch =
 
 	// notification of rune, no nofity in team mode
 	if (self.player_flag & ITEM_RUNE1_FLAG) {
+		self.items = self.items | IT_SIGIL1;
 		if (teamplay == 0) {
 			bprint(other.netname);
 			bprint(" got the rune of Åבעפט Íבחיד!\n");
@@ -1475,6 +1487,7 @@ void() RuneTouch =
 		TeamPlayerUpdate(other, "Åבעפט Íבחיד!    Òוףיףפבמדו");
 	}
 	if (self.player_flag & ITEM_RUNE2_FLAG) {
+		self.items = self.items | IT_SIGIL2;
 		if (teamplay == 0) {
 			bprint(other.netname);
 			bprint(" got the rune of Âלבדכ Íבחיד!\n");
@@ -1482,6 +1495,7 @@ void() RuneTouch =
 		TeamPlayerUpdate(other, "Âלבדכ Íבחיד!    Óפעומחפט");
 	}
 	if (self.player_flag & ITEM_RUNE3_FLAG) {
+		self.items = self.items | IT_SIGIL3;
 		if (teamplay == 0) {
 			bprint(other.netname);
 			bprint(" got the rune of Èולל Íבחיד!\n");
@@ -1489,6 +1503,7 @@ void() RuneTouch =
 		TeamPlayerUpdate(other, "Èולל Íבחיד!    Èבףפו");
 	}
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
+		self.items = self.items | IT_SIGIL4;
 		if (teamplay == 0) {
 			bprint(other.netname);
 			bprint(" got the rune of Åלהוע Íבחיד!\n");

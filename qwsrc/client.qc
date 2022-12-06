@@ -510,6 +510,8 @@ void() PutClientInServer =
 {
 	local	entity spot;
 
+	serverflags = 0; // make sure
+
 	self.classname = "player";
 	self.health = 100;
 	self.takedamage = DAMAGE_AIM;
@@ -568,6 +570,8 @@ void() PutClientInServer =
 
 	self.view_ofs = '0 0 22';
 
+	self.velocity = '0 0 0';
+
 	player_stand1 ();
 
 	makevectors(self.angles);
@@ -575,11 +579,9 @@ void() PutClientInServer =
 
 	spawn_tdeath (self.origin, self);
 
-
-        // grapple stuff
-        self.on_hook = FALSE;
-        self.hook_out = FALSE;
-        self.fire_held_down = FALSE;
+	// grapple stuff
+	self.on_hook = FALSE;
+	self.hook_out = FALSE;
 };
 
 

@@ -573,6 +573,8 @@ void() PutClientInServer =
 {
 	local	entity spot;
 
+	serverflags = 0; // make sure it's clear
+
 	spot = SelectSpawnPoint ();
 //ZOID: Minimize chance of telefragging someone, from Johannes Plass
 //(plass@dipmza.physik.uni-mainz.de) ServerModules package

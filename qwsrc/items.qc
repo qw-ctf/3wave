@@ -362,6 +362,23 @@ float(float w) RankForWeapon =
 	return 7;
 };
 
+float (float w) WeaponCode =
+{
+	if (w == IT_SUPER_SHOTGUN)
+		return 3;
+	if (w == IT_NAILGUN)
+		return 4;
+	if (w == IT_SUPER_NAILGUN)
+		return 5;
+	if (w == IT_GRENADE_LAUNCHER)
+		return 6;
+	if (w == IT_ROCKET_LAUNCHER)
+		return 7;
+	if (w == IT_LIGHTNING)
+		return 8;
+	return 1;
+};
+
 /*
 =============
 Deathmatch_Weapon
@@ -400,8 +417,16 @@ void() weapon_touch =
 //McBain: added prevweapon local variable
 	local	float	prevweapon;
 
+	// For client weapon_switch
+	local   float   w_switch;
+
 	if (!(other.flags & FL_CLIENT))
 		return;
+
+	if ((stof(infokey(other,"w_switch"))) == 0)
+		w_switch = 8;
+	else
+		w_switch = stof(infokey(other,"w_switch"));
 
 // if the player was using his best weapon, change up to the new one if better
 	stemp = self;
@@ -488,12 +513,19 @@ void() weapon_touch =
 
 	prevweapon = self.weapon;
 
-        Deathmatch_Weapon (old, new);
+	if ( WeaponCode(new) <= w_switch ) {
+		if (self.flags & FL_INWATER) {
+			if (new != IT_LIGHTNING)
+				Deathmatch_Weapon (old, new);
+		}
+		else
+			Deathmatch_Weapon (old, new);
+	}
 
-        if (self.weapon != prevweapon)
-              self.previous_weapon = prevweapon;
+	if (self.weapon != prevweapon)
+		  self.previous_weapon = prevweapon;
 
-        W_SetCurrentAmmo();
+	W_SetCurrentAmmo();
 
 	self = stemp;
 
@@ -1238,6 +1270,7 @@ void() BackpackTouch =
 	local	float	best, old, new;
 	local		entity	stemp;
 	local	float	acount;
+	local   float   b_switch;
 
 	if (other.classname != "player")
 		return;
@@ -1325,10 +1358,14 @@ void() BackpackTouch =
 		self = other;
 
 // change to the weapon
-	if (!deathmatch)
-		self.weapon = new;
-	else
-		Deathmatch_Weapon (old, new);
+	if ( WeaponCode(new) <= b_switch ) {
+		if (self.flags & FL_INWATER) {
+			if (new != IT_LIGHTNING)
+				Deathmatch_Weapon (old, new);
+		} else
+			Deathmatch_Weapon (old, new);
+	}
+
 
 	W_SetCurrentAmmo ();
 };
@@ -1437,6 +1474,7 @@ void() RuneTouch =
 
 	// notification of rune, no nofity in team mode
 	if (self.player_flag & ITEM_RUNE1_FLAG) {
+		self.items = self.items | IT_SIGIL1;
 		if (teamplay == 0) {
 			bprint(PRINT_LOW, other.netname);
 			bprint(PRINT_LOW, " got the rune of Åבעפט Íבחיד!\n");
@@ -1444,6 +1482,7 @@ void() RuneTouch =
 		TeamPlayerUpdate(other, "Åבעפט Íבחיד!    Òוףיףפבמדו");
 	}
 	if (self.player_flag & ITEM_RUNE2_FLAG) {
+		self.items = self.items | IT_SIGIL2;
 		if (teamplay == 0) {
 			bprint(PRINT_LOW, other.netname);
 			bprint(PRINT_LOW, " got the rune of Âלבדכ Íבחיד!\n");
@@ -1451,6 +1490,7 @@ void() RuneTouch =
 		TeamPlayerUpdate(other, "Âלבדכ Íבחיד!    Óפעומחפט");
 	}
 	if (self.player_flag & ITEM_RUNE3_FLAG) {
+		self.items = self.items | IT_SIGIL3;
 		if (teamplay == 0) {
 			bprint(PRINT_LOW, other.netname);
 			bprint(PRINT_LOW, " got the rune of Èולל Íבחיד!\n");
@@ -1458,6 +1498,7 @@ void() RuneTouch =
 		TeamPlayerUpdate(other, "Èולל Íבחיד!    Èבףפו");
 	}
 	if (self.player_flag & ITEM_RUNE4_FLAG) {
+		self.items = self.items | IT_SIGIL4;
 		if (teamplay == 0) {
 			bprint(PRINT_LOW, other.netname);
 			bprint(PRINT_LOW, " got the rune of Åלהוע Íבחיד!\n");

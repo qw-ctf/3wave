@@ -22,11 +22,14 @@ void(vector org, float damage) SpawnBlood;
 //
 void (entity rhook) Reset_Grapple =
 {
-        sound (rhook.owner, CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
+		if (rhook.owner == world)
+			return;
+
+        sound (rhook.owner, CHAN_NO_PHS_ADD+CHAN_WEAPON, "weapons/bounce2.wav", 1, ATTN_NORM);
         rhook.owner.on_hook = FALSE;
         rhook.owner.hook_out = FALSE;
-        rhook.owner.fire_held_down = FALSE;
         rhook.owner.weaponframe = 0;
+		rhook.owner.attack_finished = time + 0.25;
 
         rhook.think = SUB_Remove;
         rhook.nextthink = time;
@@ -280,7 +283,7 @@ void () Anchor_Grapple =
         // which is a looping sample and would continue to play. Tink1 is
         // the least offensive choice, ass NULL.WAV loops and clogs the
         // channel with silence
-        sound (self.owner, CHAN_WEAPON, "weapons/tink1.wav", 1, ATTN_NORM);
+        sound (self.owner, CHAN_NO_PHS_ADD+CHAN_WEAPON, "weapons/tink1.wav", 1, ATTN_NORM);
 
         if (!self.owner.button0)
         {
@@ -288,6 +291,7 @@ void () Anchor_Grapple =
                 return;
         }
 
+/*
         // our last chance to avoid being picked up off of the ground.
         // check over the client's head to make sure there is one unit
         // clearance so we can lift him off of the ground.
@@ -298,13 +302,15 @@ void () Anchor_Grapple =
                 return;
         }
 
-        self.owner.on_hook = TRUE;
+*/
 
         if (self.owner.flags & FL_ONGROUND)
         {
                 self.owner.flags = self.owner.flags - FL_ONGROUND;
-                setorigin(self.owner,self.owner.origin + '0 0 1');
+//                setorigin(self.owner,self.owner.origin + '0 0 1');
         }
+
+        self.owner.on_hook = TRUE;
 
         sound (self.owner, CHAN_WEAPON, "weapons/chain2.wav", 1, ATTN_NORM);
 
@@ -356,7 +362,6 @@ void () Throw_Grapple =
         setsize(newmis, '0 0 0' , '0 0 0 ');
 
         self.hook_out = TRUE;
-        self.fire_held_down = TRUE;
 };
 
 //
@@ -369,9 +374,10 @@ void () Service_Grapple =
         // drop the hook if player lets go of button
         if (!self.button0)
         {
-                self.fire_held_down = FALSE;
-                if (self.weapon == IT_GRAPPLE)
+			if (self.weapon == IT_GRAPPLE) {
                 Reset_Grapple (self.hook);
+				return;
+			}
         }
         // If hooked to a player, track them directly!
         if (self.hook.enemy.classname == "player")
@@ -392,8 +398,8 @@ void () Service_Grapple =
                         self.hook.goalentity.nextthink = time;
                 }
 
-        sound(self, CHAN_WEAPON, "weapons/chain3.wav", 1, ATTN_NORM);
-        self.lefty = FALSE;// we've reset the sound channel.
+			sound(self, CHAN_NO_PHS_ADD+CHAN_WEAPON, "weapons/chain3.wav", 1, ATTN_NORM);
+			self.lefty = FALSE;// we've reset the sound channel.
         }
 };
 
